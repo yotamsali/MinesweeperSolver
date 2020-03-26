@@ -28,6 +28,8 @@ void set_level_parameters(const char * level)
 
 bool is_level_valid(const char * level)
 {
+    // CR: First, in C we wrap each sub-condition with parentheses.
+    // CR: Second, this won't work. Try to launch your executable and you'll see why.
     if (level != EXPERT_BOARD_LEVEL &&
     level != INTERMEDIATE_BOARD_LEVEL &&
     level != BEGINNER_BOARD_LEVEL)
@@ -35,13 +37,24 @@ bool is_level_valid(const char * level)
     return true;
 }
 
+// CR: This can be moved to minesweeper_solver.c and be inside main()
+// CR: Additionally, a function named "handle" is susceptible to be an ambiguous function
+// CR: It doesn't do anything specific, it "handles" the input. Which means the coder can do
+// CR: virtually anything in this function under the cover of "handling".
+// CR: It's better to give the function a specific task, for example, verify_input()
+// CR: or initialize_game_by_input()
 bool handle_input(int argc, char *argv[])
 {
+    // CR: Why 1? It is a magic number. Change to a constant
     if (argc != 1)
     {
         printf(NUMBER_ARGUMENT_MESSAGE);
         return false;
     }
+    // CR: First of all, argv[0] is the executable name, just like in Python
+    // CR: Second, when you access an argument, don't use its index, but a constant
+    // CR: So the reader can tell what is this argument
+    // CR: For example, instead of argv[0], use argv[ARG_EXECUTABLE_NAME]
     char * input_level = argv[0];
     if (!is_level_valid(input_level))
     {
@@ -62,7 +75,8 @@ void set_board_to_unknown(t_ptr_board board)
 t_ptr_board initialize_board_ptr()
 {
     unsigned short board_memory_size = board_size._x * board_size._y * sizeof(unsigned short);
-    t_ptr_board ptr_board = (t_ptr_board*) malloc(board_memory_size);
+    // CR: The pointers here don't match
+    t_ptr_board ptr_board = (t_ptr_board) malloc(board_memory_size);
     set_board_to_unknown(ptr_board);
     return ptr_board;
 }
