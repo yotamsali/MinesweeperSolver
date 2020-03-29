@@ -4,7 +4,7 @@
 #include "minesweeper_solver.h"
 
 bool update_board(t_ptr_board board);
-bool is_game_failed(HBITMAP screenshot);
-void set_board(t_ptr_board board, HBITMAP screenshot);
+bool is_game_failed(BYTE * screenshot);
+void set_board(t_ptr_board board, BYTE * screenshot);
 
 #endif //MINESWEEPERSOLVER_BOARD_H

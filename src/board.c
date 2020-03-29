@@ -12,12 +12,12 @@ bool update_board(t_ptr_board board)
     return is_game_over;
 }
 
-bool is_game_failed(HBITMAP app_screenshot)
+bool is_game_failed(BYTE * app_screenshot)
 {
     return false;
 }
 
-void set_board(t_ptr_board board, HBITMAP app_screenshot)
+void set_board(t_ptr_board board, BYTE * screenshot)
 {
     for (unsigned short i = 0; i < board_size._x; i++)
         for (unsigned short j = 0; j < board_size._y; j++)
