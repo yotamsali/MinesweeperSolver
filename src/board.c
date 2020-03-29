@@ -1,10 +1,24 @@
+#include <windows.h>
 #include "board.h"
 #include "commander.h"
+#include "minesweeper_solver_utils.h"
 
-bool get_board(t_ptr_board board)
+bool update_board(t_ptr_board board)
 {
-    HBITMAP screenshot = get_app_screenshot();
-    free(screenshot);
+    bool is_game_over;
+    BYTE * app_screenshot = get_app_screenshot();
+    set_board(board, app_screenshot);
+    is_game_over = is_board_known(board) || is_game_failed(app_screenshot);
+    return is_game_over;
+}
+
+bool is_game_failed(HBITMAP app_screenshot)
+{
+    return false;
+}
+
+void set_board(t_ptr_board board, HBITMAP app_screenshot)
+{
     for (unsigned short i = 0; i < board_size._x; i++)
         for (unsigned short j = 0; j < board_size._y; j++)
         {

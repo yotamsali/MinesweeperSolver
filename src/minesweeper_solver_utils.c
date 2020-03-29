@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "minesweeper_solver_utils.h"
 #include "minesweeper_solver.h"
 
@@ -7,62 +5,30 @@ const t_board_size EXPERT_BOARD_SIZE = {16, 30};
 const t_board_size INTERMEDIATE_BOARD_SIZE = {16, 16};
 const t_board_size BEGINNER_BOARD_SIZE = {8, 8};
 
-void set_level_parameters(const char * level)
+void set_level_global_parameters(const char * level)
 {
-    if (level == EXPERT_BOARD_LEVEL)
+    if (strcmp(level, EXPERT_BOARD_LEVEL) == 0)
     {
         board_size = EXPERT_BOARD_SIZE;
-        game_level = EXPERT_MARK;
+        game_level_mark = EXPERT_MARK;
     }
-    else if (level == INTERMEDIATE_BOARD_LEVEL)
+    else if (strcmp(level, INTERMEDIATE_BOARD_LEVEL) == 0)
     {
         board_size = INTERMEDIATE_BOARD_SIZE;
-        game_level = INTERMEDIATE_MARK;
+        game_level_mark = INTERMEDIATE_MARK;
     }
     else
     {
         board_size = BEGINNER_BOARD_SIZE;
-        game_level = INTERMEDIATE_MARK;
+        game_level_mark = INTERMEDIATE_MARK;
     }
 }
 
 bool is_level_valid(const char * level)
 {
-    // CR: First, in C we wrap each sub-condition with parentheses.
-    // CR: Second, this won't work. Try to launch your executable and you'll see why.
-    if (level != EXPERT_BOARD_LEVEL &&
-    level != INTERMEDIATE_BOARD_LEVEL &&
-    level != BEGINNER_BOARD_LEVEL)
-        return false;
-    return true;
-}
-
-// CR: This can be moved to minesweeper_solver.c and be inside main()
-// CR: Additionally, a function named "handle" is susceptible to be an ambiguous function
-// CR: It doesn't do anything specific, it "handles" the input. Which means the coder can do
-// CR: virtually anything in this function under the cover of "handling".
-// CR: It's better to give the function a specific task, for example, verify_input()
-// CR: or initialize_game_by_input()
-bool handle_input(int argc, char *argv[])
-{
-    // CR: Why 1? It is a magic number. Change to a constant
-    if (argc != 1)
-    {
-        printf(NUMBER_ARGUMENT_MESSAGE);
-        return false;
-    }
-    // CR: First of all, argv[0] is the executable name, just like in Python
-    // CR: Second, when you access an argument, don't use its index, but a constant
-    // CR: So the reader can tell what is this argument
-    // CR: For example, instead of argv[0], use argv[ARG_EXECUTABLE_NAME]
-    char * input_level = argv[0];
-    if (!is_level_valid(input_level))
-    {
-        printf(INPUT_ERROR_MESSAGE);
-        return false;
-    }
-    set_level_parameters(input_level);
-    return true;
+    return  ((strcmp(level, EXPERT_BOARD_LEVEL) == 0) ||
+            (strcmp(level, INTERMEDIATE_BOARD_LEVEL) == 0) ||
+            (strcmp(level,BEGINNER_BOARD_LEVEL) == 0));
 }
 
 void set_board_to_unknown(t_ptr_board board)
@@ -75,14 +41,22 @@ void set_board_to_unknown(t_ptr_board board)
 t_ptr_board initialize_board_ptr()
 {
     unsigned short board_memory_size = board_size._x * board_size._y * sizeof(unsigned short);
-    // CR: The pointers here don't match
     t_ptr_board ptr_board = (t_ptr_board) malloc(board_memory_size);
     set_board_to_unknown(ptr_board);
     return ptr_board;
 }
 
-bool is_game_over(t_ptr_board board)
+bool is_board_known(t_ptr_board board)
 {
+    for (int i = 0; i < board_size._x; i++)
+        for (int j = 0; j < board_size._y; j++)
+        {
+            t_board_cell cell = {i, j};
+            if (GET_CELL(board, cell) == UNKNOWN_CELL)
+            {
+                return false;
+            }
+        }
     return true;
 }
 

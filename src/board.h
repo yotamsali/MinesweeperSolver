@@ -3,8 +3,8 @@
 
 #include "minesweeper_solver.h"
 
-#define cell(i, j, board_size) = (i * board_size->size_x + j) * sizeof(unsigned short)
-
-bool get_board(t_ptr_board board);
+bool update_board(t_ptr_board board);
+bool is_game_failed(HBITMAP screenshot);
+void set_board(t_ptr_board board, HBITMAP screenshot);
 
 #endif //MINESWEEPERSOLVER_BOARD_H
