@@ -37,12 +37,8 @@ void click(POINT cursor_position, bool is_right_click)
 {
     HWND hWnd = FindWindow(0, MINESWEEPER_WINDOW_NAME);
     SetActiveWindow(hWnd);
-    if(!SetCursorPos(cursor_position.x, cursor_position.y))
-    {
-        printf(MOUSE_PROBLEM_MESSAGE);
-        exit(1);
-    }
-    if (is_right_click)
+    SetCursorPos(cursor_position.x, cursor_position.y);
+    if(is_right_click)
     {
         mouse_event(MOUSEEVENTF_RIGHTDOWN, cursor_position.x, cursor_position.y, 0, 0);
         mouse_event(MOUSEEVENTF_RIGHTUP, cursor_position.x, cursor_position.y, 0, 0);
@@ -74,11 +70,12 @@ void execute_move(t_move move)
 {
     POINT cursor_position = get_screen_cursor_position(move._cell);
     click(cursor_position, move._is_mine);
+    move_cursor_out_of_board();
+    Sleep(SLEEP_TO_SCREEN_UPDATE_MILISECONDS);
 }
 
 void set_level_in_app()
 {
-    //TODO Implement
     if (game_level_mark == EXPERT_MARK)
         return;
     else if (game_level_mark == INTERMEDIATE_MARK)
@@ -87,47 +84,55 @@ void set_level_in_app()
         return;
 }
 
-HBITMAP get_app_screenshot_bitmap()
+void move_cursor_out_of_board()
 {
-    RECT client_rect = {0};
+    POINT point = {POINT_OUT_OF_BOARD_X, POINT_OUT_OF_BOARD_Y};
+    HWND hWnd = FindWindow(0, MINESWEEPER_WINDOW_NAME);
+    ClientToScreen(hWnd, &point);
+    SetCursorPos(point.x, point.y);
+}
+
+t_screenshot_data get_app_screenshot()
+{
+    t_screenshot_data screenshot_data;
+    RECT window_rect = {0};
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
-    GetClientRect(window_handle, &client_rect);
-    GetWindowRect(window_handle, &client_rect);
+    GetWindowRect(window_handle, &window_rect);
     HDC hdcScreen = GetDC(window_handle);
-    HDC hdc = CreateCompatibleDC(hdcScreen);
-    int width = client_rect.right - client_rect.left;
-    int height = client_rect.bottom - client_rect.top;
-    HBITMAP bitmap = CreateCompatibleBitmap(hdcScreen, width, height);
-    BitBlt(hdc, 0, 0, width, height, hdcScreen, client_rect.left, client_rect.top, SRCCOPY);
+    HDC hdc = GetDC(HWND_DESKTOP);
+    int width = window_rect.right - window_rect.left;
+    int height = window_rect.bottom - window_rect.top;
+    HDC memdc = CreateCompatibleDC(hdc);
+    HBITMAP hbitmap = CreateCompatibleBitmap(hdc, width, height);
+    HGDIOBJ oldbmp = SelectObject(memdc, hbitmap);
+    BitBlt(memdc, 0, 0, width, height, hdc, window_rect.left, window_rect.top, SRCCOPY | CAPTUREBLT);
+    SelectObject(memdc, oldbmp);
+    DeleteDC(memdc);
+    BYTE* pixels = (BYTE *) malloc (height * width * 4);
+    BITMAPINFOHEADER bitmap_information = {sizeof(bitmap_information), width, height, 1, BITMAP_INFORMATION_BIT_COUNT};
+    GetDIBits(hdc, hbitmap, 0, height, pixels,
+              (BITMAPINFO*)&bitmap_information, DIB_RGB_COLORS);
+    DeleteObject(hbitmap);
     ReleaseDC(HWND_DESKTOP, hdcScreen);
-    return bitmap;
+    debug_save_bmp(pixels, width, height, bitmap_information);
+    screenshot_data.width = width;
+    screenshot_data.height = height;
+    screenshot_data.pixels = pixels;
+    return screenshot_data;
 }
 
-BYTE * get_app_screenshot()
+void debug_save_bmp(BYTE * pixels, int width, int height, BITMAPINFOHEADER bitmap_information)
 {
-    HBITMAP bitmap = get_app_screenshot_bitmap();
-    HDC hdcSource = NULL;
-    HBITMAP hSource = NULL;
-    BITMAPINFO bitmap_info = {0};
-    bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
-    if(0 == GetDIBits(hdcSource, hSource, 0, 0, NULL, &bitmap_info, DIB_RGB_COLORS))
-        goto l_unexpected_event;
-    BYTE* lpPixels = (BYTE *) malloc(bitmap_info.bmiHeader.biSizeImage);
-
-    bitmap_info.bmiHeader.biBitCount = 32;
-    bitmap_info.bmiHeader.biCompression = BI_RGB;  // no compression -> easier to use
-    bitmap_info.bmiHeader.biHeight = abs(bitmap_info.bmiHeader.biHeight);
-    if(0 == GetDIBits(hdcSource, hSource, 0, bitmap_info.bmiHeader.biHeight,
-                      lpPixels, &bitmap_info, DIB_RGB_COLORS))
-    {
-        free(lpPixels);
-        goto l_unexpected_event;
-    }
-    DeleteObject(bitmap);
-    return lpPixels;
-
-l_unexpected_event:
-    DeleteObject(bitmap);
-    exit(1);
+    // TODO: Delete after development is finished
+    FILE * f;
+    f = fopen("filename.bmp", "w");
+    BITMAPFILEHEADER hdr = {'MB', 54 + bitmap_information.biSizeImage, 0, 0, 54};
+    fwrite((char*)&hdr, 14, 1, f);
+    fwrite((char*)&bitmap_information, 40, 1, f);
+    fwrite((char*)pixels, 4 * width * height, 1, f);
+    fclose(f);
 }
+
+
+
 

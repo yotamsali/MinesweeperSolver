@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-struct t_board_size
+struct board_size
 {
     unsigned short _x;
     unsigned short _y;
@@ -34,17 +34,17 @@ struct t_board_size
 #define SET_CELL(board, cell, value) board[cell._x * board_size._x + cell._y] = value;
 
 
-typedef struct t_board_size t_board_size;
-typedef struct t_board_size t_board_cell;
+typedef struct board_size t_board_size;
+typedef struct board_size t_board_cell;
 typedef unsigned short * t_ptr_board;
 typedef float * t_ptr_map;
 
-struct t_move
+struct move
 {
     t_board_cell _cell;
     bool _is_mine;
 };
-typedef struct t_move t_move;
+typedef struct move t_move;
 
 // Globals
 t_board_size board_size;

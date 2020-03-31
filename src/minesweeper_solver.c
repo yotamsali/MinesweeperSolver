@@ -11,13 +11,14 @@ void start_game()
     set_level_in_app();
     t_ptr_board board = initialize_board_ptr(board_size);
     t_move move = get_first_move();
-    do
+    while(true)
     {
         execute_move(move);
         is_game_over = update_board(board);
+        if (is_game_over)
+            break;
         move = get_move(board);
     }
-    while(!is_game_over);
     free(board);
 }
 
