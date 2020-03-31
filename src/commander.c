@@ -102,19 +102,19 @@ t_screenshot_data get_app_screenshot()
     HDC hdc = GetDC(HWND_DESKTOP);
     int width = window_rect.right - window_rect.left;
     int height = window_rect.bottom - window_rect.top;
-    HDC memdc = CreateCompatibleDC(hdc);
+    HDC dc = CreateCompatibleDC(hdc);
     HBITMAP hbitmap = CreateCompatibleBitmap(hdc, width, height);
-    HGDIOBJ oldbmp = SelectObject(memdc, hbitmap);
-    BitBlt(memdc, 0, 0, width, height, hdc, window_rect.left, window_rect.top, SRCCOPY | CAPTUREBLT);
-    SelectObject(memdc, oldbmp);
-    DeleteDC(memdc);
+    HGDIOBJ oldbmp = SelectObject(dc, hbitmap);
+    BitBlt(dc, 0, 0, width, height, hdc, window_rect.left, window_rect.top, SRCCOPY | CAPTUREBLT);
+    SelectObject(dc, oldbmp);
+    DeleteDC(dc);
     BYTE* pixels = (BYTE *) malloc (height * width * 4);
     BITMAPINFOHEADER bitmap_information = {sizeof(bitmap_information), width, height, 1, BITMAP_INFORMATION_BIT_COUNT};
     GetDIBits(hdc, hbitmap, 0, height, pixels,
               (BITMAPINFO*)&bitmap_information, DIB_RGB_COLORS);
     DeleteObject(hbitmap);
     ReleaseDC(HWND_DESKTOP, hdcScreen);
-    debug_save_bmp(pixels, width, height, bitmap_information);
+    //debug_save_bmp(pixels, width, height, bitmap_information);
     screenshot_data.width = width;
     screenshot_data.height = height;
     screenshot_data.pixels = pixels;
