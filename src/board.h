@@ -1,43 +1,27 @@
 #ifndef MINESWEEPERSOLVER_BOARD_H
 #define MINESWEEPERSOLVER_BOARD_H
 
-#include "commander.h"
-#include "minesweeper_solver.h"
+#include <stdbool.h>
+#include "error_codes.h"
 
-#define GET_PIXEL(screenshot_data, x, y) screenshot_data.pixels[(x * screenshot_data.width + y)]
-#define X_BITMAP_MARGIN 26
-#define Y_BITMAP_MARGIN 99
-#define BITMAP_CELL_SIZE 16.3
+#define UNKNOWN_CELL 9
+#define EMPTY_CELL 0
+#define MINE 10
 
-struct RGB_averages
-{
-    float R_average;
-    float G_average;
-    float B_average;
+struct board_size {
+    unsigned short _x;
+    unsigned short _y;
 };
-struct RGB_cell_averages
-{
-    struct RGB_averages RGB_averages;
-    unsigned short cell_type;
-};
-struct cell_rect
-{
-    int x_min;
-    int x_max;
-    int y_min;
-    int y_max;
-};
-typedef struct RGB_averages t_RGB_averages;
-typedef struct RGB_cell_averages t_RGB_cell_averages;
-typedef struct cell_rect t_cell_rect;
 
-bool update_board(t_ptr_board board);
-bool is_game_failed(t_screenshot_data screenshot_data);
-void set_board(t_ptr_board board, t_screenshot_data screenshot);
-unsigned short classify_cell(t_board_cell cell, t_screenshot_data screenshot_data);
-t_RGB_averages get_RGB_averages(t_board_cell cell, t_screenshot_data screenshot_data);
-float cell_averages_distance(t_RGB_averages x, t_RGB_averages y);
-t_cell_rect get_cell_rect(t_board_cell cell, int width, int height);
+typedef struct board_size t_board_size;
+typedef struct board_size t_board_cell;
+typedef unsigned short *t_ptr_board;
 
+#define GET_CELL(board, cell) board[cell._x * board_size._x + cell._y]
+#define SET_CELL(board, cell, value) board[cell._x * board_size._x + cell._y] = value;
+
+extern t_board_size board_size;
+
+t_error_code update_board(t_ptr_board board, bool *is_game_over);
 
 #endif //MINESWEEPERSOLVER_BOARD_H

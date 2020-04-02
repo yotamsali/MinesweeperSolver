@@ -1,75 +1,70 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "minesweeper_solver_utils.h"
 #include "commander.h"
 #include "board.h"
 #include "board_analyzer.h"
-#include "minesweeper_solver.h"
+#include "error_codes.h"
+#include "common.h"
 
-void start_game()
-{
-    // CR: An uninitialized variable?! Are you insane?
-    bool is_game_over;
-    // CR: Which app? Is it an argument? If not, it's probably a specific app.
-    // CR: Rename to raise_minesweeper.
-    raise_app();
-    set_level_in_app();
-    t_ptr_board board = initialize_board_ptr(board_size);
+// Input arguments, be careful when changing.
+typedef enum {
+    ARG_EXE_NAME = 0,
+    ARG_GAME_LEVEL = 1,
+    ARG_NUMBER // Number of argument (not arg index).
+} t_arg;
+
+t_board_size board_size = {0, 0};
+
+#define USAGE_MESSAGE "Usage: MinesweeperSolver.exe level \n level - member of {beginner, intermediate, expert}\n"
+
+int start_game(t_level minesweeper_level) {
+    t_ptr_board board = NULL;
+    t_error_code error_code = RETURN_CODE_SUCCESS;
+    board_size = minesweeper_level.board_size;
+    error_code = raise_minesweeper();
+    if (!error_code)
+        return error_code;
+    error_code = set_minesweeper_level(minesweeper_level);
+    if (!error_code)
+        return error_code;
+    error_code = initialize_board_ptr(board);
+    if (!error_code)
+        return error_code;
     t_move move = get_first_move();
-    while(true)
-    {
-        execute_move(move);
-        // CR: Can't is_game_over be defined here, in the loop?
-        // CR: Are you afraid of the time penalty of redefining a variable over and over again?
-        // CR: If so, don't. The compiler is smarter than you, it's smarter than me, it's smarter than us all.
-        // CR: Together. Times infinity. Plus one.
-        is_game_over = update_board(board);
-        if (is_game_over)
-            break;
-        move = get_move(board);
+    while (true) {
+        error_code = execute_move(move);
+        if (!error_code)
+            goto lblCleanup;
+        bool is_game_over = false;
+        error_code = update_board(board, &is_game_over);
+        if (is_game_over || !error_code)
+            goto lblCleanup;
+        error_code = get_move(board, &move);
+        if (!error_code){
+            goto lblCleanup;
+        }
     }
+    lblCleanup:
     free(board);
+    return error_code;
 }
 
-int main(int argc, char *argv[])
-{
-    // CR: At the beginning of a function, we must check its parameters. The main() function gets the
-    // CR: parameters from libc (specifically __libc_start_main, if you want to read online).
-    // CR: Thus, we can be sure that the parameters are valid, as __libc_start_main is a library function.
-    // CR: In case we are sure the parameters are valid, we still check them, but in a lightweight manner,
-    // CR: using ASSERT. For example, ASSERT(NULL != argv).
-    // CR: Create your own macro ASSERT() that will evaluate an expression assert it's true. If the expression
-    // CR: evaluates to false, the macro will print an error message stating the file, the line and the
-    // CR: expression that caused the failure. Read online how to attain all this information in C macros.
-    // CR: Remember, macros are powerful. You will be surprised what the # symbol can do in macros.
-    // CR: Additionally, create the ASSERT macro so that it will only run in DEBUG mode. In Release mode,
-    // CR: it should simply resolve to nothing.
-    // CR: The ASSERT macro is very common, and can be used to assert other invariants you assume
-    // CR: in your code, only in Debug mode, for debugging purposes.
-
-    if (argc != ARGS_NUMBER)
-    {
-        // CR: I personally would stick the message right here as a string, and not use a #define for it,
-        // CR: but it's just me. Think about what you prefer, if you'd rather have a #define, so be it.
-        // CR: Nonetheless, the error message is not indicative, as it doesn't tell the user what's the
-        // CR: correct way to invoke the executable.
-        // CR: Add a "Usage" message, a-la Python's argparse module (of course you don't have to reach
-        // CR: it's level of sophistication, we're writing in C after all).
-        printf(NUMBER_ARGUMENT_MESSAGE, argc);
-        // CR: Calls to exit() are bad practice, even though here they have no real negative impact.
-        // CR: Change it to a return or a goto lblCleanup.
-        exit(1);
+int main(int argc, char *argv[]) {
+    t_error_code error_code = RETURN_CODE_SUCCESS;
+    ASSERT(argv != NULL);
+    if (argc != ARG_NUMBER) {
+        error_code = ERROR_INCORRECT_USAGE_ARG_NUMBER;
+        goto lblUsageError;
     }
-    // CR: Is this variable necessary? Can't you use argv[ARG_GAME_LEVEL] both times?
-    // CR: Don't worry about time optimizations. Your compiler is smarter than you think, and probably
-    // CR: smarter than all of us together.
-    char * input_level = argv[ARG_GAME_LEVEL];
-    if (!is_level_valid(input_level))
-    {
-        // CR: As stated above, I would not use a #define and stick the message right here, but it's a
-        // CR: matter of style and personal preference, so choose what works best for you.
-        printf(INPUT_ERROR_MESSAGE);
-        // CR: Like I stated above, calls to exit() are evil. They truly are.
-        exit(1);
+    const t_level *minesweeper_level_ptr = get_level(argv[ARG_GAME_LEVEL]);
+    if (minesweeper_level_ptr == NULL) {
+        error_code = ERROR_INCORRECT_USAGE_ILLEGAL_LEVEL;
+        goto lblUsageError;
     }
-    set_level_global_parameters(input_level);
-    start_game();
+    error_code = start_game(*minesweeper_level_ptr);
+    return error_code;
+    lblUsageError:
+    printf(USAGE_MESSAGE);
+    return error_code;
 }
