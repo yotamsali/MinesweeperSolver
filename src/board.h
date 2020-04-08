@@ -19,6 +19,7 @@ typedef unsigned short *t_ptr_board;
 
 #define GET_CELL(board, cell) board[cell._x * board_size._x + cell._y]
 #define SET_CELL(board, cell, value) board[cell._x * board_size._x + cell._y] = value;
+#define PIXEL_SIZE_IN_BYTES 4
 
 extern t_board_size board_size;
 

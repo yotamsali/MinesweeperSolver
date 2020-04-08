@@ -19,33 +19,35 @@ t_board_size board_size = {0, 0};
 #define USAGE_MESSAGE "Usage: MinesweeperSolver.exe level \n level - member of {beginner, intermediate, expert}\n"
 
 int start_game(t_level minesweeper_level) {
-    t_ptr_board board = NULL;
     t_error_code error_code = RETURN_CODE_SUCCESS;
     board_size = minesweeper_level.board_size;
     error_code = raise_minesweeper();
-    if (!error_code)
+    if (error_code)
         return error_code;
     error_code = set_minesweeper_level(minesweeper_level);
-    if (!error_code)
+    if (error_code)
         return error_code;
-    error_code = initialize_board_ptr(board);
-    if (!error_code)
-        return error_code;
+    t_ptr_board board = initialize_board_ptr(board);
+    if (!board)
+    {
+        error_code = ERROR_INITIALIZE_BOARD_MEMORY;
+        goto lblCleanup;
+    }
     t_move move = get_first_move();
     while (true) {
         error_code = execute_move(move);
-        if (!error_code)
+        if (error_code)
             goto lblCleanup;
         bool is_game_over = false;
         error_code = update_board(board, &is_game_over);
-        if (is_game_over || !error_code)
+        if (is_game_over || error_code)
             goto lblCleanup;
         error_code = get_move(board, &move);
-        if (!error_code){
+        if (error_code){
             goto lblCleanup;
         }
     }
-    lblCleanup:
+lblCleanup:
     free(board);
     return error_code;
 }

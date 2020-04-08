@@ -12,7 +12,7 @@ struct t_level {
 };
 typedef struct t_level t_level;
 
-t_error_code initialize_board_ptr(t_ptr_board ptr_board);
+t_ptr_board initialize_board_ptr();
 
 t_move get_first_move();
 

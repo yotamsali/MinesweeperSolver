@@ -15,7 +15,7 @@
 #define BOARD_X_MARGIN 18
 #define BOARD_Y_MARGIN 61
 #define POINT_OUT_OF_BOARD {-1, -1}
-#define POINT_OPEN_LEVEL_MENU {1, 1}
+#define POINT_OPEN_LEVEL_MENU {5, -2}
 
 t_error_code raise_minesweeper() {
     STARTUPINFO startup_information;
@@ -54,8 +54,11 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
     if (!window_handle)
         return ERROR_CLICK_FIND_WINDOW_FAILED;
+    /*
+     * TODO - Think if needed, and if the answer is yes, solve this issue
     if (!SetActiveWindow(window_handle))
         return ERROR_CLICK_SET_ACTIVE_WINDOW_FAILED;
+    */
     if (!SetCursorPos(cursor_position->x, cursor_position->y))
         return ERROR_CLICK_SET_CURSOR_POS;
     if (is_right_click) {
@@ -65,6 +68,7 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
         mouse_event(MOUSEEVENTF_LEFTDOWN, cursor_position->x, cursor_position->y, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTUP, cursor_position->x, cursor_position->y, 0, 0);
     }
+    return RETURN_CODE_SUCCESS;
 }
 
 void get_minesweeper_cursor_position(POINT *minesweeper_cursor_position, t_board_cell move) {
@@ -84,21 +88,21 @@ t_error_code translate_minesweeper_point_to_screen(POINT *minesweeper_cursor_pos
 t_error_code get_screen_cursor_position(POINT *screen_cursor_position, t_board_cell move) {
     get_minesweeper_cursor_position(screen_cursor_position, move);
     t_error_code error_code = translate_minesweeper_point_to_screen(screen_cursor_position);
-    if (!error_code)
+    if (error_code)
         return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
 t_error_code execute_move(t_move move) {
-    POINT *cursor_position = NULL;
-    t_error_code error_code = get_screen_cursor_position(cursor_position, move._cell);
-    if (!error_code)
+    POINT cursor_position = {0, 0};
+    t_error_code error_code = get_screen_cursor_position(&cursor_position, move._cell);
+    if (error_code)
         return error_code;
-    error_code = click(cursor_position, move._is_mine);
-    if (!error_code)
+    error_code = click(&cursor_position, move._is_mine);
+    if (error_code)
         return error_code;
     error_code = move_cursor_out_of_board();
-    if (!error_code)
+    if (error_code)
         return error_code;
     Sleep(SLEEP_TO_SCREEN_UPDATE_MILISECONDS);
     return RETURN_CODE_SUCCESS;
@@ -108,16 +112,16 @@ t_error_code set_minesweeper_level(t_level level) {
     POINT set_level_menu = POINT_OPEN_LEVEL_MENU;
     POINT select_level_button = {level.x_button, level.y_button};
     t_error_code error_code = translate_minesweeper_point_to_screen(&set_level_menu);
-    if (!error_code)
+    if (error_code)
         return error_code;
     error_code = translate_minesweeper_point_to_screen(&select_level_button);
-    if (!error_code)
+    if (error_code)
         return error_code;
     error_code = click(&set_level_menu, false);
-    if (!error_code)
+    if (error_code)
         return error_code;
     error_code = click(&select_level_button, false);
-    if (!error_code)
+    if (error_code)
         return error_code;
     return RETURN_CODE_SUCCESS;
 }
@@ -136,7 +140,7 @@ void debug_save_bmp(BYTE *pixels, int width, int height, BITMAPINFOHEADER bitmap
 t_error_code get_minesweeper_screenshot(t_screenshot_data * screenshot_data_ptr)
 {
     //TODO: reduce length by creating sub-functions
-    //TODO: Fix cleanup label and verify everything is released.
+    //TODO: Fix cleanup label and verify everything is released (some objects are not).
     t_error_code error_code = RETURN_CODE_SUCCESS;
     RECT window_rect = {0};
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
@@ -165,14 +169,14 @@ t_error_code get_minesweeper_screenshot(t_screenshot_data * screenshot_data_ptr)
         return ERROR_GET_MINESWEEPER_SCREENSHOT_SELECT_OBJECT_FAILED;
     if (!DeleteDC(compatible_dc))
         return ERROR_GET_MINESWEEPER_SCREENSHOT_DELETE_DC_FAILED;
-    BYTE* pixels = (BYTE *) malloc(height * width * 4);
+    BYTE* pixels = (BYTE *) malloc(height * width * PIXEL_SIZE_IN_BYTES);
     if(!pixels)
     {
         error_code = ERROR_GET_MINESWEEPER_SCREENSHOT_MEMORY_ALLOC_FAILED;
         goto lblCleanup;
     }
     BITMAPINFOHEADER bitmap_information = {sizeof(bitmap_information), width, height, 1, BITMAP_INFORMATION_BIT_COUNT};
-    if(!GetDIBits(compatible_dc, hbitmap, 0, height, pixels,
+    if(!GetDIBits(desktop_dc, hbitmap, 0, height, pixels,
               (BITMAPINFO*)&bitmap_information, DIB_RGB_COLORS))
     {
         error_code = ERROR_GET_MINESWEEPER_SCREENSHOT_GET_DIBITS_FAILED;

@@ -5,9 +5,9 @@
 #include "board_analyzer.h"
 #include "minesweeper_solver_utils.h"
 
-const t_level levels[] = {{"expert",       {16, 30}, 0, 0},
-                          {"intermediate", {16, 16}, 0, 0},
-                          {"beginner",     {8,  8},  0, 0}};
+const t_level levels[] = {{"expert",       {16, 30}, 5, 82},
+                          {"intermediate", {16, 16}, 5, 60},
+                          {"beginner",     {8,  8},  5, 38}};
 
 void set_board_to_unknown(t_ptr_board board) {
     int board_cells_number = board_size._x * board_size._y;
@@ -15,14 +15,15 @@ void set_board_to_unknown(t_ptr_board board) {
         board[i] = UNKNOWN_CELL;
 }
 
-t_error_code initialize_board_ptr(t_ptr_board ptr_board) {
+t_ptr_board initialize_board_ptr() {
     unsigned short board_memory_size = board_size._x * board_size._y * sizeof(unsigned short);
-    ptr_board = (t_ptr_board) malloc(board_memory_size);
-    if (ptr_board == NULL) {
-        return ERROR_INITIALIZE_BOARD_MEMORY;
+    t_ptr_board ptr_board = (t_ptr_board) malloc(board_memory_size);
+    if (!ptr_board) {
+        goto lblReturnPtr;
     }
     set_board_to_unknown(ptr_board);
-    return RETURN_CODE_SUCCESS;
+lblReturnPtr:
+    return ptr_board;
 }
 
 t_move get_first_move() {

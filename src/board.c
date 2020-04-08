@@ -3,6 +3,7 @@
 #include <float.h>
 #include <stdbool.h>
 #include "error_codes.h"
+#include "common.h"
 #include "board.h"
 #include "commander.h"
 
@@ -25,7 +26,9 @@ typedef struct RGB_averages t_RGB_averages;
 typedef struct RGB_cell_averages t_RGB_cell_averages;
 typedef struct cell_rect t_cell_rect;
 
-#define GET_PIXEL(screenshot_data, x, y) screenshot_data->pixels[(x * screenshot_data->width + y)]
+#define GET_R_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES)
+#define GET_G_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES + 1)
+#define GET_B_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES + 2)
 #define X_BITMAP_MARGIN 26
 #define Y_BITMAP_MARGIN 99
 #define BITMAP_CELL_SIZE 16.3
@@ -50,24 +53,27 @@ float cell_averages_distance(t_RGB_averages x, t_RGB_averages y) {
 }
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
-    t_cell_rect cell_rect;
-    cell_rect.x_min = (int) round((float) cell_rect.x_min + (float) (cell._x) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN;
-    cell_rect.y_min = (int) round((float) cell_rect.y_min + (float) (cell._y) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN;
-    cell_rect.x_max = (int) round((float) cell_rect.x_min + (float) (cell._x + 1) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN;
-    cell_rect.y_max = (int) round((float) cell_rect.y_min + (float) (cell._y + 1) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN;
+    t_cell_rect cell_rect = {(int) round(((float) (cell._x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell._x + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell._y)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
+                             (int) round(((float) (cell._y + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
     return cell_rect;
 }
 
 t_RGB_averages get_RGB_averages(t_board_cell cell, t_screenshot_data *screenshot_data) {
     t_RGB_averages RGB_averages;
     t_cell_rect cell_rect = get_cell_rect(cell);
-    float R_sum, G_sum, B_sum = 0;
+    ASSERT(cell_rect.x_min >= 0);
+    ASSERT(cell_rect.y_min >= 0);
+    ASSERT(cell_rect.x_max < screenshot_data -> width);
+    ASSERT(cell_rect.y_max < screenshot_data -> height);
+    float R_sum = 0, G_sum = 0, B_sum = 0;
     int number_of_cell_pixels = (cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.x_min);
     for (int x = cell_rect.x_min; x < cell_rect.x_max; x++)
         for (int y = cell_rect.y_min; y < cell_rect.y_max; y++) {
-            R_sum += GetRValue(GET_PIXEL(screenshot_data, x, y));
-            G_sum += GetGValue(GET_PIXEL(screenshot_data, x, y));
-            B_sum += GetBValue(GET_PIXEL(screenshot_data, x, y));
+            R_sum += GET_R_PIXEL_VALUE(screenshot_data, x, y);
+            G_sum += GET_G_PIXEL_VALUE(screenshot_data, x, y);
+            B_sum += GET_B_PIXEL_VALUE(screenshot_data, x, y);
         }
     RGB_averages.R_average = R_sum / (float) number_of_cell_pixels;
     RGB_averages.G_average = G_sum / (float) number_of_cell_pixels;
@@ -76,12 +82,11 @@ t_RGB_averages get_RGB_averages(t_board_cell cell, t_screenshot_data *screenshot
 }
 
 unsigned short classify_cell(t_board_cell cell, t_screenshot_data *screenshot_data_ptr) {
-    float current_distance;
     float min_distance = FLT_MAX;
     int min_index = 0;
     t_RGB_averages current_RGB_cell_averages = get_RGB_averages(cell, screenshot_data_ptr);
     for (int i = 0; i < sizeof(cell_type_averages) / sizeof(t_RGB_cell_averages); i++) {
-        current_distance = cell_averages_distance(cell_type_averages[i].RGB_averages, current_RGB_cell_averages);
+        float current_distance = cell_averages_distance(cell_type_averages[i].RGB_averages, current_RGB_cell_averages);
         if (current_distance < min_distance)
             min_index = i;
     }
@@ -103,13 +108,12 @@ bool is_game_ended(t_screenshot_data *screenshot_data) {
 }
 
 t_error_code update_board(t_ptr_board board, bool *is_game_over) {
-    t_screenshot_data *screenshot_data_ptr = NULL;
-    t_error_code error_code = get_minesweeper_screenshot(screenshot_data_ptr);
-    if (!error_code)
+    t_error_code error_code = get_minesweeper_screenshot(&screenshot_data);
+    if (error_code)
         return error_code;
-    set_board(board, screenshot_data_ptr);
-    *is_game_over = is_game_ended(screenshot_data_ptr);
-    free(screenshot_data_ptr->pixels);
+    set_board(board, &screenshot_data);
+    *is_game_over = is_game_ended(&screenshot_data);
+    free(screenshot_data.pixels);
     return RETURN_CODE_SUCCESS;
 }
 
