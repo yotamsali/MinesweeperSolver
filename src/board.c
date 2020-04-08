@@ -108,6 +108,7 @@ bool is_game_ended(t_screenshot_data *screenshot_data) {
 }
 
 t_error_code update_board(t_ptr_board board, bool *is_game_over) {
+    t_screenshot_data screenshot_data = {0, 0, NULL};
     t_error_code error_code = get_minesweeper_screenshot(&screenshot_data);
     if (error_code)
         return error_code;
