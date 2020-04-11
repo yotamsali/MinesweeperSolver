@@ -8,7 +8,7 @@
 struct screenshot_data {
     int width;
     int height;
-    BYTE *pixels;
+    LPCOLORREF pixels;
 };
 typedef struct screenshot_data t_screenshot_data;
 

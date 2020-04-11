@@ -28,8 +28,7 @@ int start_game(t_level minesweeper_level) {
     if (error_code)
         return error_code;
     t_ptr_board board = initialize_board_ptr(board);
-    if (!board)
-    {
+    if (!board) {
         error_code = ERROR_INITIALIZE_BOARD_MEMORY;
         goto lblCleanup;
     }
@@ -39,15 +38,15 @@ int start_game(t_level minesweeper_level) {
         if (error_code)
             goto lblCleanup;
         bool is_game_over = false;
-        error_code = update_board(board, &is_game_over);
+        error_code = update_board(board, &is_game_over, minesweeper_level.game_status_rect);
         if (is_game_over || error_code)
             goto lblCleanup;
         error_code = get_move(board, &move);
-        if (error_code){
+        if (error_code) {
             goto lblCleanup;
         }
     }
-lblCleanup:
+    lblCleanup:
     free(board);
     return error_code;
 }

@@ -1,56 +1,62 @@
 #include <windows.h>
 #include <math.h>
-#include <float.h>
 #include <stdbool.h>
 #include "error_codes.h"
+#include "logger.h"
 #include "common.h"
 #include "board.h"
 #include "commander.h"
 
-struct RGB_averages {
-    float R_average;
-    float G_average;
-    float B_average;
-};
-struct RGB_cell_averages {
-    struct RGB_averages RGB_averages;
-    unsigned short cell_type;
-};
-struct cell_rect {
-    int x_min;
-    int x_max;
-    int y_min;
-    int y_max;
-};
-typedef struct RGB_averages t_RGB_averages;
-typedef struct RGB_cell_averages t_RGB_cell_averages;
-typedef struct cell_rect t_cell_rect;
-
-#define GET_R_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES)
-#define GET_G_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES + 1)
-#define GET_B_PIXEL_VALUE(screenshot_data, x, y) (BYTE)*(screenshot_data->pixels + (x * screenshot_data->width + y) * PIXEL_SIZE_IN_BYTES + 2)
-#define X_BITMAP_MARGIN 26
+#define GET_PIXEL_VALUE(pixels, x, y, width, height) *(pixels + ((height - y - 1) * width) + x)
+#define GET_R_VALUE(pixel) (LOBYTE((pixel)>>16))
+#define GET_G_VALUE(pixel) (LOBYTE(((WORD)(pixel)) >> 8))
+#define GET_B_VALUE(pixel) (LOBYTE(pixel))
+#define X_BITMAP_MARGIN 14
 #define Y_BITMAP_MARGIN 99
 #define BITMAP_CELL_SIZE 16.3
+#define UNIQUE_COLORS_NUMBER 2
+#define EIGHT_DARK_GREY_THRESHOLD 0.3
+#define WHITE_UNKNOWN_CELL_THRESHOLD 0.175
+#define UNIQUE_COLOR_THRESHOLD 0.02
+#define SEVEN_BLACK_THRESHOLD 0.01
+#define MIN_BLACK_YELLOW_RATIO_GAME_ON 0.38
+#define MAX_BLACK_YELLOW_RATIO_GAME_ON 0.39
 
-const t_RGB_cell_averages cell_type_averages[] = {{{0.0, 0.0, 0.0}, UNKNOWN_CELL},
-                                                  {{0.0, 0.0, 0.0}, EMPTY_CELL},
-                                                  {{0.0, 0.0, 0.0}, MINE},
-                                                  {{0.0, 0.0, 0.0}, 1},
-                                                  {{0.0, 0.0, 0.0}, 2},
-                                                  {{0.0, 0.0, 0.0}, 3},
-                                                  {{0.0, 0.0, 0.0}, 4},
-                                                  {{0.0, 0.0, 0.0}, 5},
-                                                  {{0.0, 0.0, 0.0}, 6},
-                                                  {{0.0, 0.0, 0.0}, 7},
-                                                  {{0.0, 0.0, 0.0}, 8}};
+struct color {
+    int R_value;
+    int G_value;
+    int B_value;
+};
 
+struct unique_color_identifier {
+    t_cell_type cell_type;
+    t_color_name unique_colors_sequence[UNIQUE_COLORS_NUMBER];
+};
 
-float cell_averages_distance(t_RGB_averages x, t_RGB_averages y) {
-    return powf(x.R_average - y.R_average, 2)
-           + powf(x.G_average - y.G_average, 2)
-           + powf(x.B_average - y.B_average, 2);
-}
+typedef struct cell_rect t_cell_rect;
+typedef struct color t_color;
+typedef struct unique_color_identifier t_unique_color_identifier;
+
+const t_color colors_palette[NUMBER_OF_COLORS] =
+        {{0,   0,   0},      // BLACK
+         {192, 192, 192},    // DEFAULT_GREY
+         {255, 255, 255},    // WHITE
+         {128, 128, 128},    // DARK_GREY
+         {255, 0,   0},      // RED
+         {128, 0,   0},      // MAROON
+         {0,   128, 0},      // GREEN
+         {0,   0,   128},    // DARK_BLUE
+         {0,   0,   255},    // BLUE
+         {0,   128, 128},    // TURQUOISE
+         {255, 255, 0}};     // YELLOW
+
+const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
+        {{ONE,   {DEFAULT_GREY, BLUE}},
+         {TWO,   {DEFAULT_GREY, GREEN}},
+         {THREE, {DEFAULT_GREY, RED}},
+         {FOUR,  {DEFAULT_GREY, DARK_BLUE}},
+         {FIVE,  {DEFAULT_GREY, MAROON}},
+         {SIX,   {DEFAULT_GREY, TURQUOISE}}};
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
     t_cell_rect cell_rect = {(int) round(((float) (cell._x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
@@ -60,63 +66,138 @@ t_cell_rect get_cell_rect(t_board_cell cell) {
     return cell_rect;
 }
 
-t_RGB_averages get_RGB_averages(t_board_cell cell, t_screenshot_data *screenshot_data) {
-    t_RGB_averages RGB_averages;
+t_color get_pixel_color(t_screenshot_data *screenshot_data, int x, int y) {
+    t_color pixel_color = {
+            GET_R_VALUE(
+                    GET_PIXEL_VALUE(screenshot_data->pixels, x, y, screenshot_data->width, screenshot_data->height)),
+            GET_G_VALUE(
+                    GET_PIXEL_VALUE(screenshot_data->pixels, x, y, screenshot_data->width, screenshot_data->height)),
+            GET_B_VALUE(
+                    GET_PIXEL_VALUE(screenshot_data->pixels, x, y, screenshot_data->width, screenshot_data->height))
+    };
+    return pixel_color;
+}
+
+bool is_colors_equal(t_color color1, t_color color2) {
+    return ((color1.R_value == color2.R_value) &&
+            (color1.G_value == color2.G_value) &&
+            (color1.B_value == color2.B_value));
+}
+
+t_color_histogram get_cell_color_histogram(t_board_cell cell, t_screenshot_data *screenshot_data) {
+    t_color_histogram histogram = (t_color_histogram) malloc(NUMBER_OF_COLORS * sizeof(float));
+    for (int i = 0; i < NUMBER_OF_COLORS; i++)
+        histogram[i] = 0;
     t_cell_rect cell_rect = get_cell_rect(cell);
     ASSERT(cell_rect.x_min >= 0);
     ASSERT(cell_rect.y_min >= 0);
-    ASSERT(cell_rect.x_max < screenshot_data -> width);
-    ASSERT(cell_rect.y_max < screenshot_data -> height);
-    float R_sum = 0, G_sum = 0, B_sum = 0;
-    int number_of_cell_pixels = (cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.x_min);
+    ASSERT(cell_rect.x_max < screenshot_data->width);
+    ASSERT(cell_rect.y_max < screenshot_data->height);
     for (int x = cell_rect.x_min; x < cell_rect.x_max; x++)
         for (int y = cell_rect.y_min; y < cell_rect.y_max; y++) {
-            R_sum += GET_R_PIXEL_VALUE(screenshot_data, x, y);
-            G_sum += GET_G_PIXEL_VALUE(screenshot_data, x, y);
-            B_sum += GET_B_PIXEL_VALUE(screenshot_data, x, y);
+            t_color pixel_color = get_pixel_color(screenshot_data, x, y);
+            for (int color_index = 0; color_index < NUMBER_OF_COLORS; color_index++) {
+                if (is_colors_equal(pixel_color, colors_palette[color_index]))
+                    histogram[color_index] += 1;
+            }
         }
-    RGB_averages.R_average = R_sum / (float) number_of_cell_pixels;
-    RGB_averages.G_average = G_sum / (float) number_of_cell_pixels;
-    RGB_averages.B_average = B_sum / (float) number_of_cell_pixels;
-    return RGB_averages;
+    for (int j = 0; j < NUMBER_OF_COLORS; j++)
+        histogram[j] /= (float) ((cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.y_min));
+    return histogram;
 }
 
-unsigned short classify_cell(t_board_cell cell, t_screenshot_data *screenshot_data_ptr) {
-    float min_distance = FLT_MAX;
-    int min_index = 0;
-    t_RGB_averages current_RGB_cell_averages = get_RGB_averages(cell, screenshot_data_ptr);
-    for (int i = 0; i < sizeof(cell_type_averages) / sizeof(t_RGB_cell_averages); i++) {
-        float current_distance = cell_averages_distance(cell_type_averages[i].RGB_averages, current_RGB_cell_averages);
-        if (current_distance < min_distance)
-            min_index = i;
+bool predict_by_unique_color(const t_color_histogram histogram, t_cell_type *prediction) {
+    for (int i = 0; i < sizeof(unique_color_identifiers) / sizeof(t_unique_color_identifier); i++) {
+        t_unique_color_identifier color_identifier = unique_color_identifiers[i];
+        bool is_color_matching = true;
+        for (int j = 0; j < UNIQUE_COLORS_NUMBER; j++)
+            if (histogram[color_identifier.unique_colors_sequence[j]] < UNIQUE_COLOR_THRESHOLD)
+                is_color_matching = false;
+        if (is_color_matching) {
+            *prediction = color_identifier.cell_type;
+            return true;
+        }
     }
-    return cell_type_averages[min_index].cell_type;
-}
-
-void set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr) {
-    for (unsigned short i = 0; i < board_size._x; i++)
-        for (unsigned short j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(board, cell) == UNKNOWN_CELL)
-                SET_CELL(board, cell, classify_cell(cell, screenshot_data_ptr));
-        }
-}
-
-bool is_game_ended(t_screenshot_data *screenshot_data) {
-    //TODO: Implement
     return false;
 }
 
-t_error_code update_board(t_ptr_board board, bool *is_game_over) {
-    t_screenshot_data screenshot_data = {0, 0, NULL};
-    t_error_code error_code = get_minesweeper_screenshot(&screenshot_data);
+t_cell_type predict_by_color_distribution(const t_color_histogram histogram) {
+    if (histogram[BLACK] > SEVEN_BLACK_THRESHOLD)
+        return SEVEN;
+    else if (histogram[DARK_GREY] > EIGHT_DARK_GREY_THRESHOLD)
+        return EIGHT;
+    else if (histogram[WHITE] < WHITE_UNKNOWN_CELL_THRESHOLD)
+        return EMPTY_CELL;
+    return UNKNOWN_CELL;
+}
+
+t_error_code classify_cell(t_cell_type *prediction, t_board_cell cell, t_screenshot_data *screenshot_data_ptr) {
+    t_color_histogram cell_histogram = get_cell_color_histogram(cell, screenshot_data_ptr);
+    t_error_code error_code = log_histogram(cell, cell_histogram);
     if (error_code)
         return error_code;
-    set_board(board, &screenshot_data);
-    *is_game_over = is_game_ended(&screenshot_data);
-    free(screenshot_data.pixels);
+    if (predict_by_unique_color(cell_histogram, prediction))
+        goto lblCleanup;
+    *prediction = predict_by_color_distribution(cell_histogram);
+    lblCleanup:
+    free(cell_histogram);
     return RETURN_CODE_SUCCESS;
 }
 
+t_error_code set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr) {
+    for (int i = 0; i < board_size._x; i++)
+        for (int j = 0; j < board_size._y; j++) {
+            t_board_cell cell = {i, j};
+            if (GET_CELL(board, cell) == UNKNOWN_CELL) {
+                t_cell_type cell_prediction = UNKNOWN_CELL;
+                t_error_code error_code = classify_cell(&cell_prediction, cell, screenshot_data_ptr);
+                if (error_code)
+                    return error_code;
+                SET_CELL(board, cell, cell_prediction);
+            }
+        }
+    return RETURN_CODE_SUCCESS;
+}
 
+t_error_code update_game_status(bool *is_game_over, t_screenshot_data *screenshot_data, t_cell_rect game_status_rect) {
+    int black_counter = 0;
+    int yellow_counter = 0;
+    for (int x = game_status_rect.x_min; x < game_status_rect.x_max; x++)
+        for (int y = game_status_rect.y_min; y < game_status_rect.y_max; y++) {
+            t_color pixel_color = get_pixel_color(screenshot_data, x, y);
+            if (is_colors_equal(pixel_color, colors_palette[YELLOW]))
+                yellow_counter++;
+            else if (is_colors_equal(pixel_color, colors_palette[BLACK]))
+                black_counter++;
+        }
+    float black_yellow_ratio = (float) black_counter / (float) yellow_counter;
+    t_error_code error_code = log_game_status(black_yellow_ratio, yellow_counter, black_counter, *is_game_over);
+    if (error_code)
+        return error_code;
+    if (MIN_BLACK_YELLOW_RATIO_GAME_ON <= black_yellow_ratio
+        && black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_GAME_ON)
+        *is_game_over = false;
+    else
+        *is_game_over = true;
+    return RETURN_CODE_SUCCESS;
+}
 
+t_error_code update_board(t_ptr_board board, bool *is_game_over, t_cell_rect game_status_rect) {
+    t_screenshot_data screenshot_data = {0, 0, NULL};
+    t_error_code error_code = RETURN_CODE_SUCCESS;
+    error_code = get_minesweeper_screenshot(&screenshot_data);
+    if (error_code)
+        return error_code;
+    error_code = update_game_status(is_game_over, &screenshot_data, game_status_rect);
+    if (*is_game_over || error_code)
+        goto lblCleanup;
+    error_code = set_board(board, &screenshot_data);
+    if (error_code)
+        goto lblCleanup;
+    error_code = log_board(board);
+    if (error_code)
+        goto lblCleanup;
+    lblCleanup:
+    free(screenshot_data.pixels);
+    return error_code;
+}
