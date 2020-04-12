@@ -1,40 +1,91 @@
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
+#include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "hard_coded_config.h"
 #include "logger.h"
 
 #define DEBUG_TAG "Debug"
 #define RUNTIME_TAG "Runtime"
+#define LOGGING_DIRECTORY_NAME "Logs"
+#define MKDIR_MODE 0700
+#define MAPS_MAX_PRINTOUT_SIZE 8192
 #define BOARD_MAX_PRINTOUT_SIZE 2048
-#define MAPS_MAX_PRINTOUT_SIZE 4096
-#define MOVE_MAX_PRINTOUT_SIZE 100
 #define HISTOGRAM_MAX_PRINTOUT_SIZE 512
+#define FILE_NAME_BUFFER_SIZE 128
+#define GAME_STATUS_MAX_PRINTOUT_SIZE 128
+#define MOVE_MAX_PRINTOUT_SIZE 64
+
+#define MOVE_TAG RUNTIME_TAG
+#define GAME_STATUS_TAG DEBUG_TAG
+#define GAME_RESTART_TAG RUNTIME_TAG
+#define HISTOGRAM_TAG DEBUG_TAG
+#define BOARD_TAG RUNTIME_TAG
+#define MAPS_TAG DEBUG_TAG
+
+
+FILE *log_file = NULL;
 
 int write_log(const char *tag, const char *message) {
     time_t now;
     time(&now);
-    return printf("%s [%s]: %s\n", ctime(&now), tag, message);
+    return fprintf(log_file, "%s [%s]: %s\n", ctime(&now), tag, message);
 }
 
-//TODO: Implement Logging configuration in hard_coded_config (Debug & Runtime should be printed?)
+bool is_logging_needed(const char *tag) {
+    if (!strncmp(tag, DEBUG_TAG, sizeof(tag)) && !DEBUG_LOGGING)
+        return false;
+    if (!RUNTIME_LOGGING)
+        return false;
+    return true;
+}
+
 t_error_code log_move(t_move move) {
+    if (!is_logging_needed(MOVE_TAG))
+        return RETURN_CODE_SUCCESS;
     char move_buffer[MOVE_MAX_PRINTOUT_SIZE];
     snprintf(move_buffer, MOVE_MAX_PRINTOUT_SIZE, "Chosen move: (%d, %d), is mine = %d",
              move._cell._x, move._cell._y, move._is_mine);
-    if (!write_log(RUNTIME_TAG, move_buffer))
+    if (!write_log(MOVE_TAG, move_buffer))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code log_game_status(float black_yellow_ratio, int yellow_counter, int black_counter, bool is_game_over) {
-    char move_buffer[MOVE_MAX_PRINTOUT_SIZE];
-    snprintf(move_buffer, MOVE_MAX_PRINTOUT_SIZE, "Is game over: %d, black yellow ratio %f, %d yellow, %d black",
-             is_game_over, black_yellow_ratio, yellow_counter, black_counter);
-    if (!write_log(DEBUG_TAG, move_buffer))
+const char *get_game_status_string(t_game_status status) {
+    switch (status) {
+        case WIN:
+            return "Win";
+        case LOST:
+            return "Lost";
+        default:
+            return "Game on";
+    }
+}
+
+t_error_code log_game_status(float black_yellow_ratio, t_game_status game_status) {
+    if (!is_logging_needed(GAME_STATUS_TAG))
+        return RETURN_CODE_SUCCESS;
+    char move_buffer[GAME_STATUS_MAX_PRINTOUT_SIZE];
+    snprintf(move_buffer, GAME_STATUS_MAX_PRINTOUT_SIZE, "Is game over: %s, black yellow ratio %f",
+             get_game_status_string(game_status), black_yellow_ratio);
+    if (!write_log(GAME_STATUS_TAG, move_buffer))
+        return ERROR_WRITE_LOG_FAILED;
+    return RETURN_CODE_SUCCESS;
+}
+
+t_error_code log_game_restart() {
+    if (!is_logging_needed(GAME_RESTART_TAG))
+        return RETURN_CODE_SUCCESS;
+    if (!write_log(GAME_RESTART_TAG, "Restarting game due to lost.\n\n"))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
 
 t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
+    if (!is_logging_needed(HISTOGRAM_TAG))
+        return RETURN_CODE_SUCCESS;
     char histogram_buffer[HISTOGRAM_MAX_PRINTOUT_SIZE];
     size_t current_buffer_length = 0;
     current_buffer_length += snprintf(histogram_buffer, HISTOGRAM_MAX_PRINTOUT_SIZE,
@@ -44,7 +95,7 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
         current_buffer_length += snprintf(histogram_buffer + current_buffer_length,
                                           HISTOGRAM_MAX_PRINTOUT_SIZE - current_buffer_length, "%.3f ", histogram[i]);
     }
-    if (!write_log(DEBUG_TAG, histogram_buffer))
+    if (!write_log(HISTOGRAM_TAG, histogram_buffer))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
@@ -57,8 +108,8 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
         float_map = (t_ptr_map) matrix;
     else
         integer_board = (t_ptr_board) matrix;
-    for (int i = 0; i < board_size._x; i++) {
-        for (int j = 0; j < board_size._y; j++) {
+    for (int i = 0; i < board_size._y; i++) {
+        for (int j = 0; j < board_size._x; j++) {
             t_board_cell cell = {j, i};
             if (is_float)
                 *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
@@ -72,32 +123,59 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
 }
 
 t_error_code log_board(t_ptr_board board) {
+    if (!is_logging_needed(BOARD_TAG))
+        return RETURN_CODE_SUCCESS;
     char board_buffer[BOARD_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(board_buffer, BOARD_MAX_PRINTOUT_SIZE, "Board detected:\n");
     write_board_matrix_to_buffer(board_buffer, board, &current_length, BOARD_MAX_PRINTOUT_SIZE, false);
-    if (!write_log(RUNTIME_TAG, board_buffer))
+    if (!write_log(BOARD_TAG, board_buffer))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
 
 t_error_code log_probability_maps(t_ptr_map mine_map, t_ptr_map clear_map) {
+    if (!is_logging_needed(MAPS_TAG))
+        return RETURN_CODE_SUCCESS;
     char maps_buffer[MAPS_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(maps_buffer, MAPS_MAX_PRINTOUT_SIZE, "Mine map:\n");
     write_board_matrix_to_buffer(maps_buffer, mine_map, &current_length, MAPS_MAX_PRINTOUT_SIZE, true);
     current_length += snprintf(maps_buffer + current_length, MAPS_MAX_PRINTOUT_SIZE, "Clear map:\n");
     write_board_matrix_to_buffer(maps_buffer, clear_map, &current_length, MAPS_MAX_PRINTOUT_SIZE, true);
-    if (!write_log(RUNTIME_TAG, maps_buffer))
+    if (!write_log(MAPS_TAG, maps_buffer))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
 
-// TODO: Implement file writing
 t_error_code open_log() {
+    if (!RUNTIME_LOGGING && !DEBUG_LOGGING)
+        return RETURN_CODE_SUCCESS;
+    time_t now;
+    struct tm *info;
+    struct stat status = {0};
+    time(&now);
+    info = localtime(&now);
+    char file_name_buffer[FILE_NAME_BUFFER_SIZE];
+    size_t written_bytes = snprintf(file_name_buffer, FILE_NAME_BUFFER_SIZE, "%s\\", LOGGING_DIRECTORY_NAME);
+    written_bytes += strftime(file_name_buffer + written_bytes, FILE_NAME_BUFFER_SIZE - written_bytes,
+                              "%Y%m%d-%H%M%S.log", info);
+    if (!written_bytes)
+        return ERROR_CREATING_LOG_FILE_NAME;
+    if (stat(LOGGING_DIRECTORY_NAME, &status) == -1) {
+        if (mkdir(LOGGING_DIRECTORY_NAME, MKDIR_MODE))
+            return ERROR_CREATING_LOGS_DIRECTORY;
+    }
+    log_file = fopen(file_name_buffer, "w");
+    if (!log_file)
+        return ERROR_OPENING_LOG_FILE;
     return RETURN_CODE_SUCCESS;
 }
 
 t_error_code close_log() {
+    if (!RUNTIME_LOGGING && !DEBUG_LOGGING)
+        return RETURN_CODE_SUCCESS;
+    if (fclose(log_file))
+        return ERROR_CLOSING_LOG_FILE;
     return RETURN_CODE_SUCCESS;
 }

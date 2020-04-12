@@ -9,8 +9,9 @@
 #include "board_analyzer.h"
 
 #define SLEEP_RAISE_WINDOW_MILISECONDS 700
-#define SLEEP_SCREEN_UPDATE_MILISECONDS 300
+#define SLEEP_SCREEN_UPDATE_MILISECONDS 251
 #define SLEEP_SWITCH_LEVEL_MILISECONDS 50
+#define SLEEP_RESTART_GAME_MILISECONDS 400
 #define BITMAP_INFORMATION_BIT_COUNT 32
 #define PIXEL_SIZE_IN_BYTES 4
 #define BOARD_CELL_SIZE 16
@@ -56,11 +57,6 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
     if (!window_handle)
         return ERROR_CLICK_FIND_WINDOW_FAILED;
-    /*
-     * TODO - Think if needed, and if the answer is yes, solve this issue
-    if (!SetActiveWindow(window_handle))
-        return ERROR_CLICK_SET_ACTIVE_WINDOW_FAILED;
-    */
     if (!SetCursorPos(cursor_position->x, cursor_position->y))
         return ERROR_CLICK_SET_CURSOR_POS;
     if (is_right_click) {
@@ -130,20 +126,23 @@ t_error_code set_minesweeper_level(t_level level) {
     return RETURN_CODE_SUCCESS;
 }
 
-void debug_save_bmp(BYTE *pixels, int width, int height, BITMAPINFOHEADER bitmap_information) {
-    // TODO: Delete after development is finished
-    FILE *f;
-    f = fopen("filename.bmp", "w");
-    BITMAPFILEHEADER hdr = {*(WORD *) "BM", 54 + bitmap_information.biSizeImage, 0, 0, 54};
-    fwrite((char *) &hdr, 14, 1, f);
-    fwrite((char *) &bitmap_information, 40, 1, f);
-    fwrite((char *) pixels, 4 * width * height, 1, f);
-    fclose(f);
+t_error_code restart_game(t_level level) {
+    POINT restart_game_point = level.point_game_restart;
+    Sleep(SLEEP_RESTART_GAME_MILISECONDS);
+    t_error_code error_code = translate_minesweeper_point_to_screen(&restart_game_point);
+    if (error_code)
+        return error_code;
+    error_code = click(&restart_game_point, false);
+    if (error_code)
+        return error_code;
+    Sleep(SLEEP_RESTART_GAME_MILISECONDS);
+    return RETURN_CODE_SUCCESS;
 }
 
 t_error_code get_minesweeper_screenshot(t_screenshot_data *screenshot_data_ptr) {
-    //TODO: reduce length by creating sub-functions
-    //TODO: Fix cleanup label and verify everything is released (some objects are not).
+    //TODO: reduce length by creating sub-functions, and verify cleanup issues.
+    // Dor - I knew that this function is too long, but when trying to split it became two too long functions
+    // due to cleanup issues (free and Delete). Do you have any idea how it is possible to handle this block of code?
     t_error_code error_code = RETURN_CODE_SUCCESS;
     RECT window_rect = {0};
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
@@ -184,8 +183,6 @@ t_error_code get_minesweeper_screenshot(t_screenshot_data *screenshot_data_ptr) 
         error_code = ERROR_GET_MINESWEEPER_SCREENSHOT_GET_DIBITS_FAILED;
         goto lblCleanup;
     }
-    // TODO: Delete this after debugging.
-    //debug_save_bmp(pixels, width, height, bitmap_information);
     screenshot_data_ptr->width = width;
     screenshot_data_ptr->height = height;
     screenshot_data_ptr->pixels = (LPCOLORREF) pixels;

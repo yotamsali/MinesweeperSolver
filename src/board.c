@@ -13,14 +13,14 @@
 #define GET_B_VALUE(pixel) (LOBYTE(pixel))
 #define X_BITMAP_MARGIN 14
 #define Y_BITMAP_MARGIN 99
-#define BITMAP_CELL_SIZE 16.3
+#define BITMAP_CELL_SIZE 16.0
 #define UNIQUE_COLORS_NUMBER 2
 #define EIGHT_DARK_GREY_THRESHOLD 0.3
 #define WHITE_UNKNOWN_CELL_THRESHOLD 0.175
 #define UNIQUE_COLOR_THRESHOLD 0.02
 #define SEVEN_BLACK_THRESHOLD 0.01
-#define MIN_BLACK_YELLOW_RATIO_GAME_ON 0.38
 #define MAX_BLACK_YELLOW_RATIO_GAME_ON 0.39
+#define MAX_BLACK_YELLOW_RATIO_LOST 0.5
 
 struct color {
     int R_value;
@@ -159,7 +159,8 @@ t_error_code set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code update_game_status(bool *is_game_over, t_screenshot_data *screenshot_data, t_cell_rect game_status_rect) {
+t_error_code
+update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_data, t_cell_rect game_status_rect) {
     int black_counter = 0;
     int yellow_counter = 0;
     for (int x = game_status_rect.x_min; x < game_status_rect.x_max; x++)
@@ -171,25 +172,26 @@ t_error_code update_game_status(bool *is_game_over, t_screenshot_data *screensho
                 black_counter++;
         }
     float black_yellow_ratio = (float) black_counter / (float) yellow_counter;
-    t_error_code error_code = log_game_status(black_yellow_ratio, yellow_counter, black_counter, *is_game_over);
+    if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_GAME_ON)
+        *game_status = GAME_ON;
+    else if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_LOST)
+        *game_status = LOST;
+    else
+        *game_status = WIN;
+    t_error_code error_code = log_game_status(black_yellow_ratio, *game_status);
     if (error_code)
         return error_code;
-    if (MIN_BLACK_YELLOW_RATIO_GAME_ON <= black_yellow_ratio
-        && black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_GAME_ON)
-        *is_game_over = false;
-    else
-        *is_game_over = true;
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code update_board(t_ptr_board board, bool *is_game_over, t_cell_rect game_status_rect) {
+t_error_code update_board(t_ptr_board board, t_game_status *game_status, t_cell_rect game_status_rect) {
     t_screenshot_data screenshot_data = {0, 0, NULL};
     t_error_code error_code = RETURN_CODE_SUCCESS;
     error_code = get_minesweeper_screenshot(&screenshot_data);
     if (error_code)
         return error_code;
-    error_code = update_game_status(is_game_over, &screenshot_data, game_status_rect);
-    if (*is_game_over || error_code)
+    error_code = update_game_status(game_status, &screenshot_data, game_status_rect);
+    if (*game_status != GAME_ON || error_code)
         goto lblCleanup;
     error_code = set_board(board, &screenshot_data);
     if (error_code)

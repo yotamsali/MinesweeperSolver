@@ -9,7 +9,9 @@ t_error_code log_board(t_ptr_board board);
 
 t_error_code log_move(t_move move);
 
-t_error_code log_game_status(float black_yellow_ratio, int yellow_counter, int black_counter, bool is_game_over);
+t_error_code log_game_restart();
+
+t_error_code log_game_status(float black_yellow_ratio, t_game_status game_status);
 
 t_error_code log_histogram(t_board_cell cell, t_color_histogram);
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "minesweeper_solver_utils.h"
+#include "logger.h"
 #include "commander.h"
 #include "board.h"
 #include "board_analyzer.h"
@@ -18,8 +19,32 @@ t_board_size board_size = {0, 0};
 
 #define USAGE_MESSAGE "Usage: MinesweeperSolver.exe level \n level - member of {beginner, intermediate, expert}\n"
 
-int start_game(t_level minesweeper_level) {
+t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
     t_error_code error_code = RETURN_CODE_SUCCESS;
+    t_ptr_board board = initialize_board_ptr(board);
+    if (!board)
+        return ERROR_INITIALIZE_BOARD_MEMORY;
+    t_move move = get_first_move();
+    while (true) {
+        error_code = execute_move(move);
+        if (error_code)
+            goto lblCleanup;
+        error_code = update_board(board, game_status, minesweeper_level.game_status_rect);
+        if (*game_status != GAME_ON || error_code)
+            goto lblCleanup;
+        error_code = get_move(board, &move, minesweeper_level.number_of_mines);
+        if (error_code) {
+            goto lblCleanup;
+        }
+    }
+    lblCleanup:
+    free(board);
+    return error_code;
+}
+
+t_error_code start_game_trials(t_level minesweeper_level) {
+    t_error_code error_code = RETURN_CODE_SUCCESS;
+    t_game_status game_status = GAME_ON;
     board_size = minesweeper_level.board_size;
     error_code = raise_minesweeper();
     if (error_code)
@@ -27,27 +52,17 @@ int start_game(t_level minesweeper_level) {
     error_code = set_minesweeper_level(minesweeper_level);
     if (error_code)
         return error_code;
-    t_ptr_board board = initialize_board_ptr(board);
-    if (!board) {
-        error_code = ERROR_INITIALIZE_BOARD_MEMORY;
-        goto lblCleanup;
-    }
-    t_move move = get_first_move();
-    while (true) {
-        error_code = execute_move(move);
+    lblStartPlay:
+    error_code = play_game(&game_status, minesweeper_level);
+    if (game_status == LOST && !error_code) {
+        error_code = restart_game(minesweeper_level);
         if (error_code)
-            goto lblCleanup;
-        bool is_game_over = false;
-        error_code = update_board(board, &is_game_over, minesweeper_level.game_status_rect);
-        if (is_game_over || error_code)
-            goto lblCleanup;
-        error_code = get_move(board, &move);
-        if (error_code) {
-            goto lblCleanup;
-        }
+            return error_code;
+        error_code = log_game_restart();
+        if (error_code)
+            return error_code;
+        goto lblStartPlay;
     }
-    lblCleanup:
-    free(board);
     return error_code;
 }
 
@@ -63,9 +78,19 @@ int main(int argc, char *argv[]) {
         error_code = ERROR_INCORRECT_USAGE_ILLEGAL_LEVEL;
         goto lblUsageError;
     }
-    error_code = start_game(*minesweeper_level_ptr);
+    error_code = open_log();
+    if (error_code)
+        goto lblReturn;
+    error_code = start_game_trials(*minesweeper_level_ptr);
+    if (error_code)
+        goto lblReturn;
+    error_code = close_log();
+    if (error_code)
+        goto lblReturn;
+    lblReturn:
     return error_code;
     lblUsageError:
     printf(USAGE_MESSAGE);
     return error_code;
+
 }

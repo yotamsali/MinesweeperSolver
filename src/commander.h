@@ -18,6 +18,8 @@ t_error_code execute_move(t_move move);
 
 t_error_code set_minesweeper_level(t_level level);
 
+t_error_code restart_game(t_level level);
+
 t_error_code get_minesweeper_screenshot(t_screenshot_data *screenshot_data_ptr);
 
 #endif //MINESWEEPERSOLVER_COMMANDER_H

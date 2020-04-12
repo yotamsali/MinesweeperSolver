@@ -5,11 +5,14 @@
 #include "board_analyzer.h"
 #include "minesweeper_solver_utils.h"
 
-const t_level levels[] = {{"expert",       {16, 30}, 5, 82,
+const t_level levels[] = {{"expert",       {30, 16}, 5, 82,
+                                  99, {245, 28},
                                   {242, 266, 63, 83}},
                           {"intermediate", {16, 16}, 5, 60,
+                                  40, {132, 28},
                                   {132, 153, 63, 83}},
                           {"beginner",     {8,  8},  5, 38,
+                                  10, {66,  28},
                                   {68,  90,  63, 83}}};
 
 void set_board_to_unknown(t_ptr_board board) {

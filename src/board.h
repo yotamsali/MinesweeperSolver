@@ -34,6 +34,12 @@ typedef enum {
     NUMBER_OF_COLORS
 } t_color_name;
 
+typedef enum {
+    GAME_ON,
+    WIN,
+    LOST
+} t_game_status;
+
 struct cell_rect {
     int x_min;
     int x_max;
@@ -52,11 +58,11 @@ typedef struct cell_rect t_cell_rect;
 typedef float *t_color_histogram;
 
 
-#define GET_CELL(board, cell) board[cell._x * board_size._x + cell._y]
-#define SET_CELL(board, cell, value) board[cell._x * board_size._x + cell._y] = value
+#define GET_CELL(board, cell) board[cell._x * board_size._y + cell._y]
+#define SET_CELL(board, cell, value) board[cell._x * board_size._y + cell._y] = value
 
 extern t_board_size board_size;
 
-t_error_code update_board(t_ptr_board board, bool *is_game_over, t_cell_rect game_status_rect);
+t_error_code update_board(t_ptr_board board, t_game_status *game_status, t_cell_rect game_status_rect);
 
 #endif //MINESWEEPERSOLVER_BOARD_H
