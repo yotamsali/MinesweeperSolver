@@ -96,8 +96,7 @@ t_move get_random_unsafe_move(t_ptr_map clear_map, float general_clear_probabili
     return random_move;
 }
 
-t_move
-select_optimal_move(t_ptr_map mine_map, t_ptr_map clear_map, float general_clear_probability, t_ptr_board board) {
+t_move select_optimal_move(t_ptr_map mine_map, t_ptr_map clear_map, float general_clear_probability, t_ptr_board board) {
     t_board_cell best_unsafe_cell = {0, 0};
     float best_unsafe_probability = 0;
     for (int i = 0; i < board_size._x; i++) {
@@ -141,15 +140,17 @@ t_ptr_map initialize_map(t_ptr_board board, float general_clear_probability, boo
     return map;
 }
 
-void update_map_cell(t_ptr_map map, t_board_cell cell, float probability) {
+void update_map_cell(t_ptr_map map, t_board_cell cell, float probability, float general_clear_probability) {
     float cell_value = GET_CELL(map, cell);
     if (cell_value != KNOWN_MAP_CELL && cell_value != FINAL_POSITIVE && cell_value != FINAL_NEGATIVE)
-        if (probability > GET_CELL(map, cell))
+        if (cell_value == general_clear_probability)
+            SET_CELL(map, cell, probability);
+        else if (probability < cell_value)
             SET_CELL(map, cell, probability);
 }
 
 void set_neighbors_map_values(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map, t_board_cell cell,
-                              t_board_cell neighbor_cells[], t_neighbors_data neighbors_data) {
+                              t_board_cell neighbor_cells[], t_neighbors_data neighbors_data, float general_clear_probability) {
     t_cell_type cell_number = GET_CELL(board, cell);
     ASSERT(cell_number >= neighbors_data.mines && cell_number <= neighbors_data.mines + neighbors_data.unknowns);
     bool all_neighbor_unknowns_clears = (cell_number == neighbors_data.mines);
@@ -172,12 +173,12 @@ void set_neighbors_map_values(t_ptr_board board, t_ptr_map mine_map, t_ptr_map c
     float mine_probability = (float) (cell_number - neighbors_data.mines) / (float) neighbors_data.unknowns;
     for (int k = 0; k < NEIGHBORS_NUMBER; k++)
         if (is_cell_in_board(neighbor_cells[k])) {
-            update_map_cell(mine_map, neighbor_cells[k], mine_probability);
-            update_map_cell(clear_map, neighbor_cells[k], 1 - mine_probability);
+            update_map_cell(mine_map, neighbor_cells[k], mine_probability, general_clear_probability);
+            update_map_cell(clear_map, neighbor_cells[k], 1 - mine_probability, general_clear_probability);
         }
 }
 
-void fill_maps(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map) {
+void fill_maps(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map, float general_clear_probability) {
     t_board_cell cell;
     for (int i = 0; i < board_size._x; i++) {
         for (int j = 0; j < board_size._y; j++) {
@@ -188,7 +189,7 @@ void fill_maps(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map) {
             t_board_cell neighbor_cells[] = NEIGHBOR_CELLS(cell);
             t_neighbors_data neighbors_data = get_neighbors_data(board, neighbor_cells);
             set_neighbors_map_values(board, mine_map, clear_map,
-                                     cell, neighbor_cells, neighbors_data);
+                                     cell, neighbor_cells, neighbors_data, general_clear_probability);
         }
     }
 }
@@ -219,7 +220,7 @@ t_error_code get_move(t_ptr_board board, t_move *move, int total_number_of_mines
     float general_clear_probability = get_general_clear_probability(total_number_of_mines, board);
     t_ptr_map mine_map = initialize_map(board, general_clear_probability, true);
     t_ptr_map clear_map = initialize_map(board, general_clear_probability, false);
-    fill_maps(board, mine_map, clear_map);
+    fill_maps(board, mine_map, clear_map, general_clear_probability);
     t_error_code error_code = log_probability_maps(mine_map, clear_map);
     if (error_code)
         return error_code;
