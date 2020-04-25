@@ -59,10 +59,10 @@ const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
          {SIX,   {DEFAULT_GREY, TURQUOISE}}};
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
-    t_cell_rect cell_rect = {(int) round(((float) (cell._x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell._x + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell._y)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
-                             (int) round(((float) (cell._y + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
+    t_cell_rect cell_rect = {(int) round(((float) (cell.x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell.x + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell.y)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
+                             (int) round(((float) (cell.y + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
     return cell_rect;
 }
 
@@ -145,8 +145,8 @@ t_error_code classify_cell(t_cell_type *prediction, t_board_cell cell, t_screens
 }
 
 t_error_code set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr) {
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
+    for (int i = 0; i < board_size.x; i++)
+        for (int j = 0; j < board_size.y; j++) {
             t_board_cell cell = {i, j};
             if (GET_CELL(board, cell) == UNKNOWN_CELL) {
                 t_cell_type cell_prediction = UNKNOWN_CELL;

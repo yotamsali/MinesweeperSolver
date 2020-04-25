@@ -20,7 +20,7 @@ typedef struct t_level t_level;
 
 t_ptr_board initialize_board_ptr();
 
-t_move get_first_move();
+t_moves get_first_moves();
 
 const t_level *get_level(char *level_arg);
 

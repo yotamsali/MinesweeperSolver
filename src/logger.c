@@ -16,7 +16,7 @@
 #define HISTOGRAM_MAX_PRINTOUT_SIZE 512
 #define FILE_NAME_BUFFER_SIZE 128
 #define GAME_STATUS_MAX_PRINTOUT_SIZE 128
-#define MOVE_MAX_PRINTOUT_SIZE 64
+#define MOVES_MAX_PRINTOUT_SIZE 2048
 
 #define MOVE_TAG RUNTIME_TAG
 #define GAME_STATUS_TAG DEBUG_TAG
@@ -42,13 +42,18 @@ bool is_logging_needed(const char *tag) {
     return true;
 }
 
-t_error_code log_move(t_move move) {
+t_error_code log_moves(t_moves moves) {
     if (!is_logging_needed(MOVE_TAG))
         return RETURN_CODE_SUCCESS;
-    char move_buffer[MOVE_MAX_PRINTOUT_SIZE];
-    snprintf(move_buffer, MOVE_MAX_PRINTOUT_SIZE, "Chosen move: (%d, %d), is mine = %d",
-             move._cell._x, move._cell._y, move._is_mine);
-    if (!write_log(MOVE_TAG, move_buffer))
+    char moves_buffer[MOVES_MAX_PRINTOUT_SIZE];
+    size_t current_buffer_length = snprintf(moves_buffer, MOVES_MAX_PRINTOUT_SIZE, "Chosen moves: Number of moves - %d\n",
+             moves.number_of_moves);
+    for (int i = 0; i < moves.number_of_moves; i++) {
+        current_buffer_length += snprintf(moves_buffer + current_buffer_length,
+                MOVES_MAX_PRINTOUT_SIZE - current_buffer_length, "Move (%d, %d), is mine - %d\n",
+                moves.moves[i].cell.x, moves.moves[i].cell.y, moves.moves[i].is_mine);
+    }
+    if (!write_log(MOVE_TAG, moves_buffer))
         return ERROR_WRITE_LOG_FAILED;
     return RETURN_CODE_SUCCESS;
 }
@@ -90,7 +95,7 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
     size_t current_buffer_length = 0;
     current_buffer_length += snprintf(histogram_buffer, HISTOGRAM_MAX_PRINTOUT_SIZE,
                                       "Histogram for cell (%d, %d):\n Histogram: ",
-                                      cell._x, cell._y);
+                                      cell.x, cell.y);
     for (int i = 0; i < NUMBER_OF_COLORS; i++) {
         current_buffer_length += snprintf(histogram_buffer + current_buffer_length,
                                           HISTOGRAM_MAX_PRINTOUT_SIZE - current_buffer_length, "%.3f ", histogram[i]);
@@ -108,8 +113,8 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
         float_map = (t_ptr_map) matrix;
     else
         integer_board = (t_ptr_board) matrix;
-    for (int i = 0; i < board_size._y; i++) {
-        for (int j = 0; j < board_size._x; j++) {
+    for (int i = 0; i < board_size.y; i++) {
+        for (int j = 0; j < board_size.x; j++) {
             t_board_cell cell = {j, i};
             if (is_float)
                 *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,

@@ -7,7 +7,7 @@
 
 t_error_code log_board(t_ptr_board board);
 
-t_error_code log_move(t_move move);
+t_error_code log_moves(t_moves moves);
 
 t_error_code log_game_restart();
 

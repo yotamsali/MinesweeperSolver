@@ -70,8 +70,8 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
 }
 
 void get_minesweeper_cursor_position(POINT *minesweeper_cursor_position, t_board_cell move) {
-    minesweeper_cursor_position->x = round(BOARD_X_MARGIN + (move._x * BOARD_CELL_SIZE));
-    minesweeper_cursor_position->y = round(BOARD_Y_MARGIN + (move._y * BOARD_CELL_SIZE));
+    minesweeper_cursor_position->x = round(BOARD_X_MARGIN + (move.x * BOARD_CELL_SIZE));
+    minesweeper_cursor_position->y = round(BOARD_Y_MARGIN + (move.y * BOARD_CELL_SIZE));
 }
 
 t_error_code translate_minesweeper_point_to_screen(POINT *minesweeper_cursor_position) {
@@ -93,10 +93,10 @@ t_error_code get_screen_cursor_position(POINT *screen_cursor_position, t_board_c
 
 t_error_code execute_move(t_move move) {
     POINT cursor_position = {0, 0};
-    t_error_code error_code = get_screen_cursor_position(&cursor_position, move._cell);
+    t_error_code error_code = get_screen_cursor_position(&cursor_position, move.cell);
     if (error_code)
         return error_code;
-    error_code = click(&cursor_position, move._is_mine);
+    error_code = click(&cursor_position, move.is_mine);
     if (error_code)
         return error_code;
     error_code = move_cursor_out_of_board();
@@ -104,6 +104,18 @@ t_error_code execute_move(t_move move) {
         return error_code;
     Sleep(SLEEP_SCREEN_UPDATE_MILISECONDS);
     return RETURN_CODE_SUCCESS;
+}
+
+t_error_code execute_moves(t_moves moves) {
+    t_error_code error_code = RETURN_CODE_SUCCESS;
+    for (int i = 0; i < moves.number_of_moves; i++) {
+        error_code = execute_move(moves.moves[i]);
+        if (error_code)
+            goto lblCleanup;
+    }
+    lblCleanup:
+    free(moves.moves);
+    return error_code;
 }
 
 t_error_code set_minesweeper_level(t_level level) {
