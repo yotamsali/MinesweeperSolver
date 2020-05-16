@@ -120,30 +120,31 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
     return RETURN_CODE_SUCCESS;
 }
 
-void print_single_cell(char *buffer, t_ptr_matrix float_matrix, t_ptr_board integer_board, t_matrix_size matrix_size,
-                        size_t *writing_length, size_t buffer_size, bool is_float, t_matrix_cell cell) {
-    if (is_float)
+void print_single_cell(char *buffer, t_data float_data, t_matrix_size matrix_size, t_board integer_board,
+                       size_t *writing_length, size_t buffer_size, bool is_float, t_matrix_cell cell) {
+    if (is_float) {
+        t_matrix float_matrix = {float_data, matrix_size};
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                    "%.3f ", MATRIX_CELL(float_matrix, matrix_size, cell));
-    else
+                                    "%.3f ", MATRIX_CELL(float_matrix, cell.x, cell.y));
+    } else
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                    "%d ", MATRIX_CELL(integer_board, matrix_size, cell));
+                                    "%d ", BOARD_CELL(integer_board, cell.x, cell.y));
 
 }
 
 void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_length,
                                   size_t buffer_size, bool is_float, bool is_transpose, t_matrix_size matrix_size) {
-    t_ptr_matrix float_matrix = NULL;
-    t_ptr_board integer_board = NULL;
+    t_data float_data = NULL;
+    t_board integer_board = NULL;
     if (is_float)
-        float_matrix = (t_ptr_matrix) matrix;
+        float_data = (t_data) matrix;
     else
-        integer_board = (t_ptr_board) matrix;
+        integer_board = (t_board) matrix;
     if (is_transpose)
         for (int i = 0; i < matrix_size.x; i++) {
             for (int j = 0; j < matrix_size.y; j++) {
                 t_matrix_cell cell = {i, j};
-                print_single_cell(buffer, float_matrix, integer_board, matrix_size,
+                print_single_cell(buffer, float_data, matrix_size, integer_board,
                                   writing_length, buffer_size, is_float, cell);
             }
             *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
@@ -152,46 +153,49 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
         for (int i = 0; i < matrix_size.y; i++) {
             for (int j = 0; j < matrix_size.x; j++) {
                 t_matrix_cell cell = {j, i};
-                print_single_cell(buffer, float_matrix, integer_board, matrix_size,
+                print_single_cell(buffer, float_data, matrix_size, integer_board,
                                   writing_length, buffer_size, is_float, cell);
             }
             *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
         }
 }
 
-t_error_code log_board(t_ptr_board board) {
+t_error_code log_board(t_board board) {
     if (!is_logging_needed(BOARD_TAG))
         return RETURN_CODE_SUCCESS;
     char board_buffer[BOARD_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(board_buffer, BOARD_MAX_PRINTOUT_SIZE, "Board detected:\n");
-    write_board_matrix_to_buffer(board_buffer, board, &current_length, BOARD_MAX_PRINTOUT_SIZE, false, false, board_size);
+    write_board_matrix_to_buffer(board_buffer, board, &current_length, BOARD_MAX_PRINTOUT_SIZE, false, false,
+                                 board_size);
     t_error_code error_code = write_log(BOARD_TAG, board_buffer);
     if (error_code)
         return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code log_matrix(t_ptr_matrix matrix, t_matrix_size matrix_size, const char *message) {
+t_error_code log_matrix(t_matrix matrix, const char *message) {
     if (!is_logging_needed(MATRIX_TAG))
         return RETURN_CODE_SUCCESS;
     char matrix_buffer[MATRIX_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(matrix_buffer, MATRIX_MAX_PRINTOUT_SIZE, "%s\n", message);
-    write_board_matrix_to_buffer(matrix_buffer, matrix, &current_length, MATRIX_MAX_PRINTOUT_SIZE, true, true, matrix_size);
+    write_board_matrix_to_buffer(matrix_buffer, matrix.data, &current_length, MATRIX_MAX_PRINTOUT_SIZE, true, true,
+                                 matrix.size);
     t_error_code error_code = write_log(MATRIX_TAG, matrix_buffer);
     if (error_code)
         return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code log_variables_map(t_ptr_matrix variables_map) {
+t_error_code log_variables_map(t_matrix variables_map) {
     if (!is_logging_needed(VARIABLES_MAP_TAG))
         return RETURN_CODE_SUCCESS;
     char printout_buffer[VARIABLES_MAP_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(printout_buffer, VARIABLES_MAP_PRINTOUT_SIZE, "Variables indexes map:\n");
-    write_board_matrix_to_buffer(printout_buffer, variables_map, &current_length, VARIABLES_MAP_PRINTOUT_SIZE, true, false, board_size);
+    write_board_matrix_to_buffer(printout_buffer, variables_map.data, &current_length, VARIABLES_MAP_PRINTOUT_SIZE,
+                                 true, false, board_size);
     t_error_code error_code = write_log(VARIABLES_MAP_TAG, printout_buffer);
     if (error_code)
         return error_code;

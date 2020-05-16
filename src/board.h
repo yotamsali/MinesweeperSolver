@@ -53,15 +53,15 @@ struct board_size {
 
 typedef struct board_size t_board_size;
 typedef struct board_size t_board_cell;
-typedef t_cell_type *t_ptr_board;
+typedef t_cell_type *t_board;
 typedef struct cell_rect t_cell_rect;
 typedef float *t_color_histogram;
 
 
-#define BOARD_CELL(board, cell) board[cell.x * board_size.y + cell.y]
+#define BOARD_CELL(board, x_index, y_index) board[x_index * board_size.y + y_index]
 
 extern t_board_size board_size;
 
-t_error_code update_board(t_ptr_board board, t_game_status *game_status, t_cell_rect game_status_rect);
+t_error_code update_board(t_board board, t_game_status *game_status, t_cell_rect game_status_rect);
 
 #endif //MINESWEEPERSOLVER_BOARD_H

@@ -15,6 +15,6 @@ struct moves {
 };
 typedef struct moves t_moves;
 
-t_error_code get_moves(t_ptr_board board, t_moves *moves, int total_number_of_mines);
+t_error_code get_moves(t_board board, t_moves *moves, int total_number_of_mines);
 
 #endif //MINESWEEPERSOLVER_BOARD_ANALYZER_H

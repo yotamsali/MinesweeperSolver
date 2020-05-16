@@ -6,11 +6,11 @@
 #include "board.h"
 #include "matrix.h"
 
-t_error_code log_board(t_ptr_board board);
+t_error_code log_board(t_board board);
 
-t_error_code log_matrix(t_ptr_matrix matrix, t_matrix_size matrix_size, const char *message);
+t_error_code log_matrix(t_matrix matrix, const char *message);
 
-t_error_code log_variables_map(t_ptr_matrix variables_map);
+t_error_code log_variables_map(t_matrix variables_map);
 
 t_error_code log_moves(t_moves moves);
 

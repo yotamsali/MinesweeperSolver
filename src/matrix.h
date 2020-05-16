@@ -3,16 +3,20 @@
 
 #include "board.h"
 
-#define MATRIX_CELL(matrix, matrix_size, cell) matrix[cell.x * matrix_size.y + cell.y]
+#define MATRIX_CELL(matrix, x_index, y_index) matrix.data[x_index * matrix.size.y + y_index]
 
 typedef t_board_size t_matrix_size;
 typedef t_board_cell t_matrix_cell;
-typedef double *t_ptr_matrix;
+typedef double *t_data;
+typedef struct {
+    t_data data;
+    t_matrix_size size;
+} t_matrix;
 
-t_ptr_matrix initialize_matrix(t_matrix_size matrix_size, double fill);
+t_matrix initialize_matrix(t_matrix_size matrix_size, double fill);
 
-void gauss_eliminate(t_ptr_matrix matrix, t_matrix_size matrix_size);
+void gauss_eliminate(t_matrix matrix);
 
-int get_first_non_zero_row(t_ptr_matrix matrix, t_matrix_size matrix_size);
+int get_last_non_zero_row(t_matrix matrix);
 
 #endif //MINESWEEPERSOLVER_MATRIX_H
