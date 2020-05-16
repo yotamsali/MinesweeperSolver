@@ -148,19 +148,18 @@ t_error_code set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr
     for (int i = 0; i < board_size.x; i++)
         for (int j = 0; j < board_size.y; j++) {
             t_board_cell cell = {i, j};
-            if (GET_CELL(board, cell) == UNKNOWN_CELL) {
+            if (BOARD_CELL(board, cell) == UNKNOWN_CELL) {
                 t_cell_type cell_prediction = UNKNOWN_CELL;
                 t_error_code error_code = classify_cell(&cell_prediction, cell, screenshot_data_ptr);
                 if (error_code)
                     return error_code;
-                SET_CELL(board, cell, cell_prediction);
+                BOARD_CELL(board, cell) = cell_prediction;
             }
         }
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code
-update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_data, t_cell_rect game_status_rect) {
+t_error_code update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_data, t_cell_rect game_status_rect) {
     int black_counter = 0;
     int yellow_counter = 0;
     for (int x = game_status_rect.x_min; x < game_status_rect.x_max; x++)

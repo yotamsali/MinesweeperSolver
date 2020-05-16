@@ -14,7 +14,6 @@ struct moves {
     size_t number_of_moves;
 };
 typedef struct moves t_moves;
-typedef float *t_ptr_map;
 
 t_error_code get_moves(t_ptr_board board, t_moves *moves, int total_number_of_mines);
 

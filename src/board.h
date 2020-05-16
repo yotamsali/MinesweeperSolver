@@ -52,17 +52,13 @@ struct board_size {
 };
 
 typedef struct board_size t_board_size;
-typedef t_board_size t_matrix_size;
 typedef struct board_size t_board_cell;
-typedef t_board_cell t_matrix_cell;
 typedef t_cell_type *t_ptr_board;
-typedef double *t_ptr_matrix;
 typedef struct cell_rect t_cell_rect;
 typedef float *t_color_histogram;
 
 
-#define GET_CELL(board, cell) board[cell.x * board_size.y + cell.y]
-#define SET_CELL(board, cell, value) board[cell.x * board_size.y + cell.y] = value
+#define BOARD_CELL(board, cell) board[cell.x * board_size.y + cell.y]
 
 extern t_board_size board_size;
 

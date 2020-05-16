@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "board_analyzer.h"
 #include "hard_coded_config.h"
 #include "logger.h"
 
@@ -11,27 +12,35 @@
 #define RUNTIME_TAG "Runtime"
 #define LOGGING_DIRECTORY_NAME "Logs"
 #define MKDIR_MODE 0700
-#define MAPS_MAX_PRINTOUT_SIZE 8192
+#define MATRIX_MAX_PRINTOUT_SIZE 8192
+#define VARIABLES_MAP_PRINTOUT_SIZE 4096
+#define MOVES_MAX_PRINTOUT_SIZE 2048
 #define BOARD_MAX_PRINTOUT_SIZE 2048
 #define HISTOGRAM_MAX_PRINTOUT_SIZE 512
 #define FILE_NAME_BUFFER_SIZE 128
 #define GAME_STATUS_MAX_PRINTOUT_SIZE 128
-#define MOVES_MAX_PRINTOUT_SIZE 2048
+#define ILLEGAL_CELL_PRINTOUT_SIZE 128
 
 #define MOVE_TAG RUNTIME_TAG
 #define GAME_STATUS_TAG DEBUG_TAG
 #define GAME_RESTART_TAG RUNTIME_TAG
 #define HISTOGRAM_TAG DEBUG_TAG
 #define BOARD_TAG RUNTIME_TAG
-#define MAPS_TAG DEBUG_TAG
+#define MATRIX_TAG RUNTIME_TAG
+#define VARIABLES_MAP_TAG RUNTIME_TAG
+#define ILLEGAL_CELL_TAG RUNTIME_TAG
 
 
 FILE *log_file = NULL;
 
-int write_log(const char *tag, const char *message) {
+t_error_code write_log(const char *tag, const char *message) {
     time_t now;
     time(&now);
-    return fprintf(log_file, "%s [%s]: %s\n", ctime(&now), tag, message);
+    if (fprintf(log_file, "%s [%s]: %s\n", ctime(&now), tag, message) < 0)
+        return ERROR_WRITE_LOG_FPRINTF_FAILED;
+    if (fflush(log_file))
+        return ERROR_WRITE_LOG_FFLUSH_FAILED;
+    return RETURN_CODE_SUCCESS;
 }
 
 bool is_logging_needed(const char *tag) {
@@ -46,15 +55,18 @@ t_error_code log_moves(t_moves moves) {
     if (!is_logging_needed(MOVE_TAG))
         return RETURN_CODE_SUCCESS;
     char moves_buffer[MOVES_MAX_PRINTOUT_SIZE];
-    size_t current_buffer_length = snprintf(moves_buffer, MOVES_MAX_PRINTOUT_SIZE, "Chosen moves: Number of moves - %d\n",
-             moves.number_of_moves);
+    size_t current_buffer_length = snprintf(moves_buffer, MOVES_MAX_PRINTOUT_SIZE,
+                                            "Chosen moves: Number of moves - %d\n",
+                                            moves.number_of_moves);
     for (int i = 0; i < moves.number_of_moves; i++) {
         current_buffer_length += snprintf(moves_buffer + current_buffer_length,
-                MOVES_MAX_PRINTOUT_SIZE - current_buffer_length, "Move (%d, %d), is mine - %d\n",
-                moves.moves[i].cell.x, moves.moves[i].cell.y, moves.moves[i].is_mine);
+                                          MOVES_MAX_PRINTOUT_SIZE - current_buffer_length,
+                                          "Move (%d, %d), is mine - %d\n",
+                                          moves.moves[i].cell.x, moves.moves[i].cell.y, moves.moves[i].is_mine);
     }
-    if (!write_log(MOVE_TAG, moves_buffer))
-        return ERROR_WRITE_LOG_FAILED;
+    t_error_code error_code = write_log(MOVE_TAG, moves_buffer);
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
@@ -72,19 +84,21 @@ const char *get_game_status_string(t_game_status status) {
 t_error_code log_game_status(float black_yellow_ratio, t_game_status game_status) {
     if (!is_logging_needed(GAME_STATUS_TAG))
         return RETURN_CODE_SUCCESS;
-    char move_buffer[GAME_STATUS_MAX_PRINTOUT_SIZE];
-    snprintf(move_buffer, GAME_STATUS_MAX_PRINTOUT_SIZE, "Is game over: %s, black yellow ratio %f",
+    char status_buffer[GAME_STATUS_MAX_PRINTOUT_SIZE];
+    snprintf(status_buffer, GAME_STATUS_MAX_PRINTOUT_SIZE, "Is game over: %s, black yellow ratio %f",
              get_game_status_string(game_status), black_yellow_ratio);
-    if (!write_log(GAME_STATUS_TAG, move_buffer))
-        return ERROR_WRITE_LOG_FAILED;
+    t_error_code error_code = write_log(GAME_STATUS_TAG, status_buffer);
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
 t_error_code log_game_restart() {
     if (!is_logging_needed(GAME_RESTART_TAG))
         return RETURN_CODE_SUCCESS;
-    if (!write_log(GAME_RESTART_TAG, "Restarting game due to lost.\n\n"))
-        return ERROR_WRITE_LOG_FAILED;
+    t_error_code error_code = write_log(GAME_RESTART_TAG, "Restarting game due to lost.\n\n");
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
@@ -100,31 +114,49 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
         current_buffer_length += snprintf(histogram_buffer + current_buffer_length,
                                           HISTOGRAM_MAX_PRINTOUT_SIZE - current_buffer_length, "%.3f ", histogram[i]);
     }
-    if (!write_log(HISTOGRAM_TAG, histogram_buffer))
-        return ERROR_WRITE_LOG_FAILED;
+    t_error_code error_code = write_log(HISTOGRAM_TAG, histogram_buffer);
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
+void print_single_cell(char *buffer, t_ptr_matrix float_matrix, t_ptr_board integer_board, t_matrix_size matrix_size,
+                        size_t *writing_length, size_t buffer_size, bool is_float, t_matrix_cell cell) {
+    if (is_float)
+        *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
+                                    "%.3f ", MATRIX_CELL(float_matrix, matrix_size, cell));
+    else
+        *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
+                                    "%d ", MATRIX_CELL(integer_board, matrix_size, cell));
+
+}
+
 void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_length,
-                                  size_t buffer_size, bool is_float) {
-    t_ptr_map float_map = NULL;
+                                  size_t buffer_size, bool is_float, bool is_transpose, t_matrix_size matrix_size) {
+    t_ptr_matrix float_matrix = NULL;
     t_ptr_board integer_board = NULL;
     if (is_float)
-        float_map = (t_ptr_map) matrix;
+        float_matrix = (t_ptr_matrix) matrix;
     else
         integer_board = (t_ptr_board) matrix;
-    for (int i = 0; i < board_size.y; i++) {
-        for (int j = 0; j < board_size.x; j++) {
-            t_board_cell cell = {j, i};
-            if (is_float)
-                *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                            "%.3f ", GET_CELL(float_map, cell));
-            else
-                *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                            "%d ", GET_CELL(integer_board, cell));
+    if (is_transpose)
+        for (int i = 0; i < matrix_size.x; i++) {
+            for (int j = 0; j < matrix_size.y; j++) {
+                t_matrix_cell cell = {i, j};
+                print_single_cell(buffer, float_matrix, integer_board, matrix_size,
+                                  writing_length, buffer_size, is_float, cell);
+            }
+            *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
         }
-        *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
-    }
+    else
+        for (int i = 0; i < matrix_size.y; i++) {
+            for (int j = 0; j < matrix_size.x; j++) {
+                t_matrix_cell cell = {j, i};
+                print_single_cell(buffer, float_matrix, integer_board, matrix_size,
+                                  writing_length, buffer_size, is_float, cell);
+            }
+            *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
+        }
 }
 
 t_error_code log_board(t_ptr_board board) {
@@ -133,23 +165,47 @@ t_error_code log_board(t_ptr_board board) {
     char board_buffer[BOARD_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
     current_length += snprintf(board_buffer, BOARD_MAX_PRINTOUT_SIZE, "Board detected:\n");
-    write_board_matrix_to_buffer(board_buffer, board, &current_length, BOARD_MAX_PRINTOUT_SIZE, false);
-    if (!write_log(BOARD_TAG, board_buffer))
-        return ERROR_WRITE_LOG_FAILED;
+    write_board_matrix_to_buffer(board_buffer, board, &current_length, BOARD_MAX_PRINTOUT_SIZE, false, false, board_size);
+    t_error_code error_code = write_log(BOARD_TAG, board_buffer);
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code log_probability_maps(t_ptr_map mine_map, t_ptr_map clear_map) {
-    if (!is_logging_needed(MAPS_TAG))
+t_error_code log_matrix(t_ptr_matrix matrix, t_matrix_size matrix_size, const char *message) {
+    if (!is_logging_needed(MATRIX_TAG))
         return RETURN_CODE_SUCCESS;
-    char maps_buffer[MAPS_MAX_PRINTOUT_SIZE];
+    char matrix_buffer[MATRIX_MAX_PRINTOUT_SIZE];
     size_t current_length = 0;
-    current_length += snprintf(maps_buffer, MAPS_MAX_PRINTOUT_SIZE, "Mine map:\n");
-    write_board_matrix_to_buffer(maps_buffer, mine_map, &current_length, MAPS_MAX_PRINTOUT_SIZE, true);
-    current_length += snprintf(maps_buffer + current_length, MAPS_MAX_PRINTOUT_SIZE, "Clear map:\n");
-    write_board_matrix_to_buffer(maps_buffer, clear_map, &current_length, MAPS_MAX_PRINTOUT_SIZE, true);
-    if (!write_log(MAPS_TAG, maps_buffer))
-        return ERROR_WRITE_LOG_FAILED;
+    current_length += snprintf(matrix_buffer, MATRIX_MAX_PRINTOUT_SIZE, "%s\n", message);
+    write_board_matrix_to_buffer(matrix_buffer, matrix, &current_length, MATRIX_MAX_PRINTOUT_SIZE, true, true, matrix_size);
+    t_error_code error_code = write_log(MATRIX_TAG, matrix_buffer);
+    if (error_code)
+        return error_code;
+    return RETURN_CODE_SUCCESS;
+}
+
+t_error_code log_variables_map(t_ptr_matrix variables_map) {
+    if (!is_logging_needed(VARIABLES_MAP_TAG))
+        return RETURN_CODE_SUCCESS;
+    char printout_buffer[VARIABLES_MAP_PRINTOUT_SIZE];
+    size_t current_length = 0;
+    current_length += snprintf(printout_buffer, VARIABLES_MAP_PRINTOUT_SIZE, "Variables indexes map:\n");
+    write_board_matrix_to_buffer(printout_buffer, variables_map, &current_length, VARIABLES_MAP_PRINTOUT_SIZE, true, false, board_size);
+    t_error_code error_code = write_log(VARIABLES_MAP_TAG, printout_buffer);
+    if (error_code)
+        return error_code;
+    return RETURN_CODE_SUCCESS;
+}
+
+t_error_code log_illegal_cell(t_board_cell cell) {
+    if (!is_logging_needed(ILLEGAL_CELL_TAG))
+        return RETURN_CODE_SUCCESS;
+    char buffer[ILLEGAL_CELL_PRINTOUT_SIZE];
+    snprintf(buffer, ILLEGAL_CELL_PRINTOUT_SIZE, "Illegal cell detected: (%d, %d)", cell.x, cell.y);
+    t_error_code error_code = write_log(ILLEGAL_CELL_TAG, buffer);
+    if (error_code)
+        return error_code;
     return RETURN_CODE_SUCCESS;
 }
 

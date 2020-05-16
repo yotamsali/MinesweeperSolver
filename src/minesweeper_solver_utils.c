@@ -33,7 +33,7 @@ t_ptr_board initialize_board_ptr() {
 }
 
 t_moves get_first_moves() {
-    t_move *first_move = (t_move*)malloc(sizeof(t_move));
+    t_move *first_move = (t_move *) malloc(sizeof(t_move));
     t_board_cell first_move_cell = {board_size.x / 2, board_size.y / 2};
     first_move->is_mine = false;
     first_move->cell = first_move_cell;
