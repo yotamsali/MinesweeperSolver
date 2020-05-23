@@ -18,7 +18,7 @@ struct t_level {
 };
 typedef struct t_level t_level;
 
-t_board initialize_board_ptr();
+t_board initialize_board();
 
 t_moves get_first_moves();
 

@@ -15,19 +15,19 @@ const t_level levels[] = {{"expert",       {30, 16}, 5, 82,
                                   10, {66,  28},
                                   {68,  90,  63, 83}}};
 
-void set_board_to_unknown(t_board board) {
+void set_board_cells_to_unknown(t_board board) {
     int board_cells_number = board_size.x * board_size.y;
     for (int i = 0; i < board_cells_number; i++)
         board[i] = UNKNOWN_CELL;
 }
 
-t_board initialize_board_ptr() {
+t_board initialize_board() {
     int board_memory_size = board_size.x * board_size.y * sizeof(t_cell_type);
     t_board ptr_board = (t_board) malloc(board_memory_size);
     if (!ptr_board) {
         goto lblReturnPtr;
     }
-    set_board_to_unknown(ptr_board);
+    set_board_cells_to_unknown(ptr_board);
     lblReturnPtr:
     return ptr_board;
 }

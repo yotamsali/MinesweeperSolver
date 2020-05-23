@@ -19,4 +19,8 @@ void gauss_eliminate(t_matrix matrix);
 
 int get_last_non_zero_row(t_matrix matrix);
 
+double get_row_upper_bound(t_matrix matrix, int row);
+
+double get_row_lower_bound(t_matrix matrix, int row);
+
 #endif //MINESWEEPERSOLVER_MATRIX_H

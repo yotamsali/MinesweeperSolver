@@ -122,20 +122,32 @@ bool is_informative_row(t_matrix matrix, int row) {
     return true;
 }
 
-int mark_row_variables(t_matrix variables_map, t_matrix matrix, t_matrix deterministic_map,
-                       int row, bool is_mine) {
+void zero_variable_in_all_next_equations(t_matrix matrix, int col, int row, double variable_value) {
+    for (int equation = row; equation >= 0; equation--) {
+        MATRIX_CELL(matrix, equation, col) = 0;
+        MATRIX_CELL(matrix, equation, matrix.size.y - 1) -= MATRIX_CELL(matrix, row, col) * variable_value;
+    }
+}
+
+int extract_partial_solution_from_row(t_matrix variables_map, t_matrix matrix, t_matrix deterministic_map,
+                       int row, bool is_upper_bound) {
     int marked_variables = 0;
     for (int col = 0; col < matrix.size.y - 1; col++) {
-        if (MATRIX_CELL(matrix, row, col) == 0)
-            continue;
         t_board_cell board_cell = extract_board_cell(col, variables_map);
         if (IS_DETERMINISTIC(MATRIX_CELL(deterministic_map, board_cell.x, board_cell.y)))
             continue;
-        if (is_mine)
+        bool is_mine = (MATRIX_CELL(matrix, row, col) > 0 && is_upper_bound) || (MATRIX_CELL(matrix, row, col) < 0 && !is_upper_bound);
+        bool is_clear = (MATRIX_CELL(matrix, row, col) > 0 && !is_upper_bound) || (MATRIX_CELL(matrix, row, col) < 0 && is_upper_bound);
+        if (is_mine) {
             MATRIX_CELL(deterministic_map, board_cell.x, board_cell.y) = VARIABLES_MAP_MINE;
-        else
+            zero_variable_in_all_next_equations(matrix, col, row, 1);
+        }
+        else if (is_clear) {
             MATRIX_CELL(deterministic_map, board_cell.x, board_cell.y) = VARIABLES_MAP_CLEAR;
-        marked_variables++;
+            zero_variable_in_all_next_equations(matrix, col, row, 0);
+        }
+        if (is_mine || is_clear)
+            marked_variables++;
     }
     return marked_variables;
 }
@@ -143,21 +155,16 @@ int mark_row_variables(t_matrix variables_map, t_matrix matrix, t_matrix determi
 int mark_deterministic_cells(t_matrix matrix, t_matrix variables_map,
                              t_matrix deterministic_map) {
     int deterministic_cells = 0;
-    for (int row = 0; row < matrix.size.x; row++) {
-        double row_sum = 0, bias = 0;
-        if (!is_informative_row(matrix, row))
-            continue;
-        for (int col = 0; col < matrix.size.y - 1; col++) {
-            row_sum += MATRIX_CELL(matrix, row, col);
+    int last_non_zero_row = get_last_non_zero_row(matrix);
+    for (int row = last_non_zero_row; row < matrix.size.x && row >= 0; row--) {
+        double row_upper_bound = get_row_upper_bound(matrix, row);
+        double row_lower_bound = get_row_lower_bound(matrix, row);
+        double row_bias = MATRIX_CELL(matrix, row, matrix.size.y - 1);
+        if (row_bias == row_lower_bound)
+            deterministic_cells += extract_partial_solution_from_row(variables_map, matrix, deterministic_map, row, false);
+        else if (row_bias == row_upper_bound) {
+            deterministic_cells += extract_partial_solution_from_row(variables_map, matrix, deterministic_map, row, true);
         }
-        bias = MATRIX_CELL(matrix, row, matrix.size.y - 1);
-        if (row_sum == 0)
-            continue;
-        ASSERT(row_sum > 0)
-        if (bias == 0)
-            deterministic_cells += mark_row_variables(variables_map, matrix, deterministic_map, row, false);
-        else if (bias == row_sum)
-            deterministic_cells += mark_row_variables(variables_map, matrix, deterministic_map, row, true);
     }
     return deterministic_cells;
 }
@@ -260,6 +267,7 @@ t_board_cell get_random_isolated_cell(t_board board, t_matrix variables_map) {
     return random_isolated_cell;
 }
 
+//TODO: Update according to max / min range (with relative part).
 float get_best_clear_variable(t_board_cell *best_variable_clear, t_matrix matrix, t_matrix variables_map) {
     float maximal_clear_probability = 0;
     for (int row = 0; row < matrix.size.x; row++) {

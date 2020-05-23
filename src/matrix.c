@@ -65,6 +65,7 @@ int get_last_non_zero_row(t_matrix matrix) {
         if (!is_non_zeros_row)
             return row;
     }
+    return matrix.size.x - 1;
 }
 
 t_matrix initialize_matrix(t_matrix_size matrix_size, double fill) {
@@ -78,4 +79,22 @@ t_matrix initialize_matrix(t_matrix_size matrix_size, double fill) {
         }
     lblReturn:
     return matrix;
+}
+
+double get_row_lower_bound(t_matrix matrix, int row) {
+    double lower_bound = 0;
+    for (int col = 0; col < matrix.size.y -1; col++) {
+        if (MATRIX_CELL(matrix, row, col) < 0)
+            lower_bound += MATRIX_CELL(matrix, row, col);
+    }
+    return lower_bound;
+}
+
+double get_row_upper_bound(t_matrix matrix, int row) {
+    double upper_bound = 0;
+    for (int col = 0; col < matrix.size.y -1; col++) {
+        if (MATRIX_CELL(matrix, row, col) > 0)
+            upper_bound += MATRIX_CELL(matrix, row, col);
+    }
+    return upper_bound;
 }

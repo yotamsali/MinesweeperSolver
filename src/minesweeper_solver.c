@@ -21,7 +21,7 @@ t_board_size board_size = {0, 0};
 
 t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
     t_error_code error_code = RETURN_CODE_SUCCESS;
-    t_board board = initialize_board_ptr(board);
+    t_board board = initialize_board(board);
     if (!board)
         return ERROR_INITIALIZE_BOARD_MEMORY;
     t_moves moves = get_first_moves();
