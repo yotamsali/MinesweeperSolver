@@ -70,8 +70,8 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
 }
 
 void get_minesweeper_cursor_position(POINT *minesweeper_cursor_position, t_board_cell move) {
-    minesweeper_cursor_position->x = round(BOARD_X_MARGIN + (move.x * BOARD_CELL_SIZE));
-    minesweeper_cursor_position->y = round(BOARD_Y_MARGIN + (move.y * BOARD_CELL_SIZE));
+    minesweeper_cursor_position->x = round(BOARD_X_MARGIN + (move.row * BOARD_CELL_SIZE));
+    minesweeper_cursor_position->y = round(BOARD_Y_MARGIN + (move.col * BOARD_CELL_SIZE));
 }
 
 t_error_code translate_minesweeper_point_to_screen(POINT *minesweeper_cursor_position) {

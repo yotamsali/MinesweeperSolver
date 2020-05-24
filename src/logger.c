@@ -62,7 +62,7 @@ t_error_code log_moves(t_moves moves) {
         current_buffer_length += snprintf(moves_buffer + current_buffer_length,
                                           MOVES_MAX_PRINTOUT_SIZE - current_buffer_length,
                                           "Move (%d, %d), is mine - %d\n",
-                                          moves.moves[i].cell.x, moves.moves[i].cell.y, moves.moves[i].is_mine);
+                                          moves.moves[i].cell.row, moves.moves[i].cell.col, moves.moves[i].is_mine);
     }
     t_error_code error_code = write_log(MOVE_TAG, moves_buffer);
     if (error_code)
@@ -109,7 +109,7 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
     size_t current_buffer_length = 0;
     current_buffer_length += snprintf(histogram_buffer, HISTOGRAM_MAX_PRINTOUT_SIZE,
                                       "Histogram for cell (%d, %d):\n Histogram: ",
-                                      cell.x, cell.y);
+                                      cell.row, cell.col);
     for (int i = 0; i < NUMBER_OF_COLORS; i++) {
         current_buffer_length += snprintf(histogram_buffer + current_buffer_length,
                                           HISTOGRAM_MAX_PRINTOUT_SIZE - current_buffer_length, "%.3f ", histogram[i]);
@@ -125,10 +125,10 @@ void print_single_cell(char *buffer, t_data float_data, t_matrix_size matrix_siz
     if (is_float) {
         t_matrix float_matrix = {float_data, matrix_size};
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                    "%.3f ", MATRIX_CELL(float_matrix, cell.x, cell.y));
+                                    "%.3f ", MATRIX_CELL(float_matrix, cell.row, cell.col));
     } else
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                    "%d ", BOARD_CELL(integer_board, cell.x, cell.y));
+                                    "%d ", BOARD_CELL(integer_board, cell.row, cell.col));
 
 }
 
@@ -141,18 +141,18 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
     else
         integer_board = (t_board) matrix;
     if (is_transpose)
-        for (int i = 0; i < matrix_size.x; i++) {
-            for (int j = 0; j < matrix_size.y; j++) {
-                t_matrix_cell cell = {i, j};
+        for (int row = 0; row < matrix_size.rows; row++) {
+            for (int col = 0; col < matrix_size.cols; col++) {
+                t_matrix_cell cell = {row, col};
                 print_single_cell(buffer, float_data, matrix_size, integer_board,
                                   writing_length, buffer_size, is_float, cell);
             }
             *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
         }
     else
-        for (int i = 0; i < matrix_size.y; i++) {
-            for (int j = 0; j < matrix_size.x; j++) {
-                t_matrix_cell cell = {j, i};
+        for (int col = 0; col < matrix_size.cols; col++) {
+            for (int row = 0; row < matrix_size.rows; row++) {
+                t_matrix_cell cell = {row, col};
                 print_single_cell(buffer, float_data, matrix_size, integer_board,
                                   writing_length, buffer_size, is_float, cell);
             }
@@ -206,7 +206,7 @@ t_error_code log_illegal_cell(t_board_cell cell) {
     if (!is_logging_needed(ILLEGAL_CELL_TAG))
         return RETURN_CODE_SUCCESS;
     char buffer[ILLEGAL_CELL_PRINTOUT_SIZE];
-    snprintf(buffer, ILLEGAL_CELL_PRINTOUT_SIZE, "Illegal cell detected: (%d, %d)", cell.x, cell.y);
+    snprintf(buffer, ILLEGAL_CELL_PRINTOUT_SIZE, "Illegal cell detected: (%d, %d)", cell.row, cell.col);
     t_error_code error_code = write_log(ILLEGAL_CELL_TAG, buffer);
     if (error_code)
         return error_code;

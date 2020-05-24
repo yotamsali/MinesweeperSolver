@@ -59,10 +59,10 @@ const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
          {SIX,   {DEFAULT_GREY, TURQUOISE}}};
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
-    t_cell_rect cell_rect = {(int) round(((float) (cell.x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell.x + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell.y)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
-                             (int) round(((float) (cell.y + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
+    t_cell_rect cell_rect = {(int) round(((float) (cell.row)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell.row + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((float) (cell.col)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
+                             (int) round(((float) (cell.col + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
     return cell_rect;
 }
 
@@ -145,15 +145,15 @@ t_error_code classify_cell(t_cell_type *prediction, t_board_cell cell, t_screens
 }
 
 t_error_code set_board(t_board board, t_screenshot_data *screenshot_data_ptr) {
-    for (int i = 0; i < board_size.x; i++)
-        for (int j = 0; j < board_size.y; j++) {
-            t_board_cell cell = {i, j};
-            if (BOARD_CELL(board, i, j) == UNKNOWN_CELL) {
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
+            if (BOARD_CELL(board, row, col) == UNKNOWN_CELL) {
                 t_cell_type cell_prediction = UNKNOWN_CELL;
                 t_error_code error_code = classify_cell(&cell_prediction, cell, screenshot_data_ptr);
                 if (error_code)
                     return error_code;
-                BOARD_CELL(board, i, j) = cell_prediction;
+                BOARD_CELL(board, row, col) = cell_prediction;
             }
         }
     return RETURN_CODE_SUCCESS;

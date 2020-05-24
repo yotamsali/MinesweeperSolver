@@ -3,7 +3,7 @@
 
 #include "board.h"
 
-#define MATRIX_CELL(matrix, x_index, y_index) matrix.data[x_index * matrix.size.y + y_index]
+#define MATRIX_CELL(matrix, x_index, y_index) matrix.data[x_index * matrix.size.cols + y_index]
 
 typedef t_board_size t_matrix_size;
 typedef t_board_cell t_matrix_cell;

@@ -47,18 +47,23 @@ struct cell_rect {
     int y_max;
 };
 struct board_size {
-    int x;
-    int y;
+    int rows;
+    int cols;
+};
+
+struct board_cell {
+    int row;
+    int col;
 };
 
 typedef struct board_size t_board_size;
-typedef struct board_size t_board_cell;
+typedef struct board_cell t_board_cell;
 typedef t_cell_type *t_board;
 typedef struct cell_rect t_cell_rect;
 typedef float *t_color_histogram;
 
 
-#define BOARD_CELL(board, x_index, y_index) board[x_index * board_size.y + y_index]
+#define BOARD_CELL(board, x_index, y_index) board[x_index * board_size.cols + y_index]
 
 extern t_board_size board_size;
 

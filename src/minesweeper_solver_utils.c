@@ -16,13 +16,13 @@ const t_level levels[] = {{"expert",       {30, 16}, 5, 82,
                                   {68,  90,  63, 83}}};
 
 void set_board_cells_to_unknown(t_board board) {
-    int board_cells_number = board_size.x * board_size.y;
+    int board_cells_number = board_size.rows * board_size.cols;
     for (int i = 0; i < board_cells_number; i++)
         board[i] = UNKNOWN_CELL;
 }
 
 t_board initialize_board() {
-    int board_memory_size = board_size.x * board_size.y * sizeof(t_cell_type);
+    int board_memory_size = board_size.rows * board_size.cols * sizeof(t_cell_type);
     t_board ptr_board = (t_board) malloc(board_memory_size);
     if (!ptr_board) {
         goto lblReturnPtr;
@@ -34,7 +34,7 @@ t_board initialize_board() {
 
 t_moves get_first_moves() {
     t_move *first_move = (t_move *) malloc(sizeof(t_move));
-    t_board_cell first_move_cell = {board_size.x / 2, board_size.y / 2};
+    t_board_cell first_move_cell = {board_size.rows / 2, board_size.cols / 2};
     first_move->is_mine = false;
     first_move->cell = first_move_cell;
     t_moves moves = {first_move, 1};
