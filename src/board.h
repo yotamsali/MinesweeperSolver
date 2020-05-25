@@ -47,22 +47,26 @@ struct cell_rect {
     int y_max;
 };
 struct board_size {
-    int _x;
-    int _y;
+    int rows;
+    int cols;
+};
+
+struct board_cell {
+    int row;
+    int col;
 };
 
 typedef struct board_size t_board_size;
-typedef struct board_size t_board_cell;
-typedef t_cell_type *t_ptr_board;
+typedef struct board_cell t_board_cell;
+typedef t_cell_type *t_board;
 typedef struct cell_rect t_cell_rect;
-typedef float *t_color_histogram;
+typedef double *t_color_histogram;
 
 
-#define GET_CELL(board, cell) board[cell._x * board_size._y + cell._y]
-#define SET_CELL(board, cell, value) board[cell._x * board_size._y + cell._y] = value
+#define BOARD_CELL(board, x_index, y_index) board[x_index * board_size.cols + y_index]
 
 extern t_board_size board_size;
 
-t_error_code update_board(t_ptr_board board, t_game_status *game_status, t_cell_rect game_status_rect);
+t_error_code update_board(t_board board, t_game_status *game_status, t_cell_rect game_status_rect);
 
 #endif //MINESWEEPERSOLVER_BOARD_H

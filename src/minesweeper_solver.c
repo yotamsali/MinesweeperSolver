@@ -21,18 +21,18 @@ t_board_size board_size = {0, 0};
 
 t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
     t_error_code error_code = RETURN_CODE_SUCCESS;
-    t_ptr_board board = initialize_board_ptr(board);
+    t_board board = initialize_board(board);
     if (!board)
         return ERROR_INITIALIZE_BOARD_MEMORY;
-    t_move move = get_first_move();
+    t_moves moves = get_first_moves();
     while (true) {
-        error_code = execute_move(move);
+        error_code = execute_moves(moves);
         if (error_code)
             goto lblCleanup;
         error_code = update_board(board, game_status, minesweeper_level.game_status_rect);
         if (*game_status != GAME_ON || error_code)
             goto lblCleanup;
-        error_code = get_move(board, &move, minesweeper_level.number_of_mines);
+        error_code = get_moves(board, &moves, minesweeper_level.number_of_mines);
         if (error_code) {
             goto lblCleanup;
         }
@@ -43,10 +43,9 @@ t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
 }
 
 t_error_code start_game_trials(t_level minesweeper_level) {
-    t_error_code error_code = RETURN_CODE_SUCCESS;
     t_game_status game_status = GAME_ON;
     board_size = minesweeper_level.board_size;
-    error_code = raise_minesweeper();
+    t_error_code error_code = raise_minesweeper();
     if (error_code)
         return error_code;
     error_code = set_minesweeper_level(minesweeper_level);

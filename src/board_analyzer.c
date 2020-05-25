@@ -1,65 +1,63 @@
 #include <stdlib.h>
-#include <math.h>
-#include <time.h>
 #include "common.h"
 #include "board.h"
 #include "board_analyzer.h"
 #include "logger.h"
+#include "matrix.h"
 
-#define KNOWN_MAP_CELL -1
-#define FINAL_POSITIVE 1
-#define FINAL_NEGATIVE 0
 #define NEIGHBORS_NUMBER 8
-
-#define NEIGHBOR_CELLS(cell) {{cell._x - 1, cell._y - 1},   \
-                                {cell._x - 1, cell._y},     \
-                                {cell._x - 1, cell._y + 1}, \
-                                {cell._x, cell._y - 1},     \
-                                {cell._x, cell._y + 1},     \
-                                {cell._x + 1, cell._y - 1}, \
-                                {cell._x + 1, cell._y},     \
-                                {cell._x + 1, cell._y + 1}} \
+#define VARIABLES_MAP_NULL -1.0
+#define VARIABLES_MAP_MINE -2.0
+#define VARIABLES_MAP_CLEAR -3.0
+#define IS_DETERMINISTIC(x) (x == VARIABLES_MAP_MINE || x == VARIABLES_MAP_CLEAR)
+#define NEIGHBOR_CELLS(cell) {{cell.row - 1, cell.col - 1},   \
+                                {cell.row - 1, cell.col},     \
+                                {cell.row - 1, cell.col + 1}, \
+                                {cell.row, cell.col - 1},     \
+                                {cell.row, cell.col + 1},     \
+                                {cell.row + 1, cell.col - 1}, \
+                                {cell.row + 1, cell.col},     \
+                                {cell.row + 1, cell.col + 1}} \
 
 struct neighbors_data {
     int unknowns;
     int mines;
 };
+
 typedef struct neighbors_data t_neighbors_data;
 
-
-bool is_numeric_cell(t_ptr_board board, t_board_cell cell) {
-    t_cell_type cell_value = GET_CELL(board, cell);
+bool is_numeric_cell(t_board board, t_board_cell cell) {
+    t_cell_type cell_value = BOARD_CELL(board, cell.row, cell.col);
     return cell_value != MINE && cell_value != UNKNOWN_CELL;
 }
 
-float get_general_clear_probability(int total_number_of_mines, t_ptr_board board) {
+double get_isolated_clear_probability(int total_number_of_mines, t_board board) {
     int detected_mines_counter = 0;
     int unknown_cells_counter = 0;
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(board, cell) == MINE)
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            if (BOARD_CELL(board, row, col) == MINE)
                 detected_mines_counter++;
-            if (GET_CELL(board, cell) == UNKNOWN_CELL)
+            if (BOARD_CELL(board, row, col) == UNKNOWN_CELL)
                 unknown_cells_counter++;
         }
-    return 1 - ((float) (total_number_of_mines - detected_mines_counter) /
-                (float) (unknown_cells_counter));
+    return 1 - ((double) (total_number_of_mines - detected_mines_counter) /
+                (double) (unknown_cells_counter));
 }
 
 bool is_cell_in_board(t_board_cell cell) {
-    if (cell._x >= board_size._x || cell._x < 0)
+    if (cell.row >= board_size.rows || cell.row < 0)
         return false;
-    if (cell._y >= board_size._y || cell._y < 0)
+    if (cell.col >= board_size.cols || cell.col < 0)
         return false;
     return true;
 }
 
-t_neighbors_data get_neighbors_data(t_ptr_board board, t_board_cell neighbor_cells[]) {
+t_neighbors_data get_neighbors_data(t_board board, t_board_cell neighbor_cells[]) {
     int unknown_counter = 0, mine_counter = 0;
     for (int k = 0; k < NEIGHBORS_NUMBER; k++)
         if (is_cell_in_board(neighbor_cells[k])) {
-            t_cell_type cell_value = GET_CELL(board, neighbor_cells[k]);
+            t_cell_type cell_value = BOARD_CELL(board, neighbor_cells[k].row, neighbor_cells[k].col);
             if (cell_value == MINE)
                 mine_counter++;
             else if (cell_value == UNKNOWN_CELL)
@@ -69,180 +67,278 @@ t_neighbors_data get_neighbors_data(t_ptr_board board, t_board_cell neighbor_cel
     return neighbors_data;
 }
 
-t_move get_random_unsafe_move(t_ptr_map clear_map, float general_clear_probability, t_move fallback_move) {
-    t_move random_move = fallback_move;
-    int possible_random_cells_counter = 0;
-    int random_cell_search_counter = 0;
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(clear_map, cell) == general_clear_probability)
-                possible_random_cells_counter++;
-        }
-    srand(time(NULL));
-    int random_index = rand() % possible_random_cells_counter;
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(clear_map, cell) == general_clear_probability) {
-                if (random_cell_search_counter == random_index) {
-                    random_move._cell = cell;
-                    goto lblReturn;
-                }
-                random_cell_search_counter++;
-            }
-        }
-    lblReturn:
-    return random_move;
-}
 
-t_move select_optimal_move(t_ptr_map mine_map, t_ptr_map clear_map, float general_clear_probability, t_ptr_board board) {
-    t_board_cell best_unsafe_cell = {0, 0};
-    float best_unsafe_probability = 0;
-    for (int i = 0; i < board_size._x; i++) {
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell current_cell = {i, j};
-            float mine_probability = GET_CELL(mine_map, current_cell);
-            float clear_probability = GET_CELL(clear_map, current_cell);
-            if (mine_probability == KNOWN_MAP_CELL || clear_probability == KNOWN_MAP_CELL)
+t_error_code get_matrix_dimensions(t_board board, t_matrix_size *matrix_size) {
+    matrix_size->rows = 0;
+    matrix_size->cols = 1;
+    t_matrix is_cell_variable_marked = initialize_matrix(board_size, false);
+    if (!is_cell_variable_marked.data)
+        return ERROR_INITIALIZE_MATRIX_MEMORY_ALLOC;
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
+            bool is_cell_equation = false;
+            if (!is_numeric_cell(board, cell))
                 continue;
-            if (mine_probability == FINAL_POSITIVE || clear_probability == FINAL_POSITIVE) {
-                t_move selected_deterministic_move = {current_cell, (bool) mine_probability};
-                return selected_deterministic_move;
-
-            }
-            if (clear_probability > best_unsafe_probability) {
-                best_unsafe_cell = current_cell;
-                best_unsafe_probability = clear_probability;
-            }
-        }
-    }
-    t_move best_unsafe_move = {best_unsafe_cell, false};
-    if (best_unsafe_probability == general_clear_probability)
-        return get_random_unsafe_move(clear_map, general_clear_probability, best_unsafe_move);
-    return best_unsafe_move;
-}
-
-t_ptr_map initialize_map(t_ptr_board board, float general_clear_probability, bool is_mine_map) {
-    t_ptr_map map = malloc(sizeof(float) * board_size._x * board_size._y);
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(board, cell) != UNKNOWN_CELL)
-                SET_CELL(map, cell, KNOWN_MAP_CELL);
-            else {
-                if (is_mine_map)
-                    SET_CELL(map, cell, 1 - general_clear_probability);
-                else
-                    SET_CELL(map, cell, general_clear_probability);
-            }
-        }
-    return map;
-}
-
-void update_map_cell(t_ptr_map map, t_board_cell cell, float probability, float general_clear_probability) {
-    float cell_value = GET_CELL(map, cell);
-    if (cell_value != KNOWN_MAP_CELL && cell_value != FINAL_POSITIVE && cell_value != FINAL_NEGATIVE)
-        if (cell_value == general_clear_probability)
-            SET_CELL(map, cell, probability);
-        else if (probability < cell_value)
-            SET_CELL(map, cell, probability);
-}
-
-void set_neighbors_map_values(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map, t_board_cell cell,
-                              t_board_cell neighbor_cells[], t_neighbors_data neighbors_data, float general_clear_probability) {
-    t_cell_type cell_number = GET_CELL(board, cell);
-    ASSERT(cell_number >= neighbors_data.mines && cell_number <= neighbors_data.mines + neighbors_data.unknowns);
-    bool all_neighbor_unknowns_clears = (cell_number == neighbors_data.mines);
-    bool all_neighbor_unknowns_mines = (cell_number == neighbors_data.mines + neighbors_data.unknowns);
-    if (neighbors_data.unknowns == 0)
-        return;
-    if (all_neighbor_unknowns_clears || all_neighbor_unknowns_mines) {
-        for (int k = 0; k < NEIGHBORS_NUMBER; k++)
-            if (is_cell_in_board(neighbor_cells[k]))
-                if (GET_CELL(board, neighbor_cells[k]) == UNKNOWN_CELL)
-                    if (all_neighbor_unknowns_clears) {
-                        SET_CELL(mine_map, neighbor_cells[k], FINAL_NEGATIVE);
-                        SET_CELL(clear_map, neighbor_cells[k], FINAL_POSITIVE);
-                    } else {
-                        SET_CELL(mine_map, neighbor_cells[k], FINAL_POSITIVE);
-                        SET_CELL(clear_map, neighbor_cells[k], FINAL_NEGATIVE);
+            t_board_cell neighbor_cells[] = NEIGHBOR_CELLS(cell);
+            for (int k = 0; k < NEIGHBORS_NUMBER; k++) {
+                if (is_cell_in_board(neighbor_cells[k])
+                    && BOARD_CELL(board, neighbor_cells[k].row, neighbor_cells[k].col) == UNKNOWN_CELL) {
+                    is_cell_equation = true;
+                    if (MATRIX_CELL(is_cell_variable_marked, neighbor_cells[k].row, neighbor_cells[k].col) == false) {
+                        MATRIX_CELL(is_cell_variable_marked, neighbor_cells[k].row, neighbor_cells[k].col) = true;
+                        matrix_size->cols += 1;
                     }
-        return;
+                }
+            }
+            if (is_cell_equation)
+                matrix_size->rows += 1;
+        }
+    free(is_cell_variable_marked.data);
+    return RETURN_CODE_SUCCESS;
+}
+
+t_board_cell extract_board_cell(int variable_number, t_matrix variables_map) {
+    t_board_cell cell = {0, 0};
+    for (int row = 0; row < board_size.rows; row++) {
+        for (int col = 0; col < board_size.cols; col++) {
+            if ((int) MATRIX_CELL(variables_map, row, col) == variable_number) {
+                cell.row = row;
+                cell.col = col;
+                goto lblReturn;
+            }
+        }
     }
-    float mine_probability = (float) (cell_number - neighbors_data.mines) / (float) neighbors_data.unknowns;
-    for (int k = 0; k < NEIGHBORS_NUMBER; k++)
-        if (is_cell_in_board(neighbor_cells[k])) {
-            update_map_cell(mine_map, neighbor_cells[k], mine_probability, general_clear_probability);
-            update_map_cell(clear_map, neighbor_cells[k], 1 - mine_probability, general_clear_probability);
+    lblReturn:
+    ASSERT(BOARD_CELL(variables_map, cell.row, cell.col) == variable_number);
+    return cell;
+}
+
+bool is_informative_row(t_matrix matrix, int row) {
+    for (int col = 0; col < matrix.size.cols - 1; col++) {
+        if (MATRIX_CELL(matrix, row, col) < 0)
+            return false;
+    }
+    return true;
+}
+
+void zero_variable_in_all_next_equations(t_matrix matrix, int col, int row, double variable_value) {
+    for (int equation = row - 1; equation >= 0; equation--) {
+        if (MATRIX_CELL(matrix, equation, col) != 0) {
+            if (variable_value != 0)
+                MATRIX_CELL(matrix, equation, matrix.size.cols - 1) -= MATRIX_CELL(matrix, equation, col);
+            MATRIX_CELL(matrix, equation, col) = 0;
+        }
+    }
+}
+
+int extract_partial_solution_from_row(t_matrix variables_map, t_matrix matrix, t_matrix deterministic_map,
+                       int row, bool is_upper_bound) {
+    int marked_variables = 0;
+    for (int col = 0; col < matrix.size.cols - 1; col++) {
+        t_board_cell board_cell = extract_board_cell(col, variables_map);
+        if (IS_DETERMINISTIC(MATRIX_CELL(deterministic_map, board_cell.row, board_cell.col)))
+            continue;
+        bool is_mine = (MATRIX_CELL(matrix, row, col) > 0 && is_upper_bound) || (MATRIX_CELL(matrix, row, col) < 0 && !is_upper_bound);
+        bool is_clear = (MATRIX_CELL(matrix, row, col) > 0 && !is_upper_bound) || (MATRIX_CELL(matrix, row, col) < 0 && is_upper_bound);
+        if (is_mine) {
+            MATRIX_CELL(deterministic_map, board_cell.row, board_cell.col) = VARIABLES_MAP_MINE;
+            zero_variable_in_all_next_equations(matrix, col, row, 1);
+        }
+        else if (is_clear) {
+            MATRIX_CELL(deterministic_map, board_cell.row, board_cell.col) = VARIABLES_MAP_CLEAR;
+            zero_variable_in_all_next_equations(matrix, col, row, 0);
+        }
+        if (is_mine || is_clear)
+            marked_variables++;
+    }
+    return marked_variables;
+}
+
+int mark_deterministic_cells(t_matrix matrix, t_matrix variables_map,
+                             t_matrix deterministic_map) {
+    int deterministic_cells = 0;
+    int last_non_zero_row = get_last_non_zero_row(matrix);
+    for (int row = last_non_zero_row; row < matrix.size.rows && row >= 0; row--) {
+        double row_upper_bound = get_row_upper_bound(matrix, row);
+        double row_lower_bound = get_row_lower_bound(matrix, row);
+        double row_bias = MATRIX_CELL(matrix, row, matrix.size.cols - 1);
+        if (row_bias == row_lower_bound)
+            deterministic_cells += extract_partial_solution_from_row(variables_map, matrix, deterministic_map, row, false);
+        else if (row_bias == row_upper_bound) {
+            deterministic_cells += extract_partial_solution_from_row(variables_map, matrix, deterministic_map, row, true);
+        }
+    }
+    return deterministic_cells;
+}
+
+void extract_deterministic_moves(t_matrix deterministic_map, int number_of_deterministic_cells, t_moves *moves) {
+    moves->number_of_moves = number_of_deterministic_cells;
+    moves->moves = (t_move *) malloc(sizeof(t_move) * number_of_deterministic_cells);
+    int current_move = 0;
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
+            if (IS_DETERMINISTIC(MATRIX_CELL(deterministic_map, row, col))) {
+                moves->moves[current_move].cell = cell;
+                moves->moves[current_move].is_mine = (MATRIX_CELL(deterministic_map, row, col) == VARIABLES_MAP_MINE);
+                current_move++;
+            }
         }
 }
 
-void fill_maps(t_ptr_board board, t_ptr_map mine_map, t_ptr_map clear_map, float general_clear_probability) {
-    t_board_cell cell;
-    for (int i = 0; i < board_size._x; i++) {
-        for (int j = 0; j < board_size._y; j++) {
-            cell._x = i;
-            cell._y = j;
+t_matrix fill_matrix(t_board board, t_matrix matrix) {
+    int variables_counter = 0;
+    int current_equation = 0;
+    t_matrix variables_map = initialize_matrix(board_size, VARIABLES_MAP_NULL);
+    for (int row = 0; row < board_size.rows; row++) {
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
             if (!is_numeric_cell(board, cell))
                 continue;
             t_board_cell neighbor_cells[] = NEIGHBOR_CELLS(cell);
             t_neighbors_data neighbors_data = get_neighbors_data(board, neighbor_cells);
-            set_neighbors_map_values(board, mine_map, clear_map,
-                                     cell, neighbor_cells, neighbors_data, general_clear_probability);
+            if (neighbors_data.unknowns == 0)
+                continue;
+            for (int k = 0; k < NEIGHBORS_NUMBER; k++) {
+                if (is_cell_in_board(neighbor_cells[k]) &&
+                    BOARD_CELL(board, neighbor_cells[k].row, neighbor_cells[k].col) == UNKNOWN_CELL) {
+                    if (MATRIX_CELL(variables_map, neighbor_cells[k].row, neighbor_cells[k].col) == VARIABLES_MAP_NULL) {
+                        MATRIX_CELL(variables_map, neighbor_cells[k].row, neighbor_cells[k].col) = variables_counter;
+                        variables_counter++;
+                    }
+                    MATRIX_CELL(matrix, current_equation,
+                                (int) MATRIX_CELL(variables_map, neighbor_cells[k].row, neighbor_cells[k].col)) = 1;
+                }
+            }
+            MATRIX_CELL(matrix, current_equation, matrix.size.cols - 1) = BOARD_CELL(board, row, col) - neighbors_data.mines;
+            current_equation++;
         }
     }
+    return variables_map;
 }
 
-bool is_legal_board(t_ptr_board board) {
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
+bool is_legal_board(t_board board) {
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
             if (is_numeric_cell(board, cell)) {
                 t_board_cell neighbor_cells[] = NEIGHBOR_CELLS(cell);
                 t_neighbors_data neighbors_data = get_neighbors_data(board, neighbor_cells);
-                int cell_number = GET_CELL(board, cell);
-                if (neighbors_data.mines > cell_number || cell_number > neighbors_data.mines + neighbors_data.unknowns)
+                int cell_number = BOARD_CELL(board, row, col);
+                if (neighbors_data.mines > cell_number ||
+                    cell_number > neighbors_data.mines + neighbors_data.unknowns) {
+                    log_illegal_cell(cell);
                     return false;
+                }
             }
         }
     return true;
 }
 
-void update_board_by_move(t_ptr_board board, t_move move) {
-    if (move._is_mine)
-        SET_CELL(board, move._cell, MINE);
+void update_board_by_moves(t_board board, t_moves moves) {
+    for (int i = 0; i < moves.number_of_moves; i++) {
+        t_move move = moves.moves[i];
+        if (move.is_mine)
+            BOARD_CELL(board, move.cell.row, move.cell.col) = MINE;
+    }
 }
 
-t_error_code get_move(t_ptr_board board, t_move *move, int total_number_of_mines) {
+t_board_cell get_random_isolated_cell(t_board board, t_matrix variables_map) {
+    t_board_cell random_isolated_cell = {0, 0};
+    int isolated_cells_number = 0;
+    int random_isolated_index = 0;
+    int index_counter = 0;
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            if (BOARD_CELL(board, row, col) == UNKNOWN_CELL && MATRIX_CELL(variables_map, row, col) == VARIABLES_MAP_NULL)
+                isolated_cells_number++;
+        }
+    random_isolated_index = (rand() % isolated_cells_number);
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            if (BOARD_CELL(board, row, col) == UNKNOWN_CELL && MATRIX_CELL(variables_map, row, col) == VARIABLES_MAP_NULL) {
+                if (index_counter == random_isolated_index) {
+                    random_isolated_cell.row = row;
+                    random_isolated_cell.col = col;
+                    goto lblReturn;
+                }
+                index_counter++;
+            }
+        }
+    lblReturn:
+    return random_isolated_cell;
+}
+
+double get_best_clear_variable(t_board_cell *best_variable_clear, t_matrix matrix, t_matrix variables_map) {
+    double maximal_clear_probability = 0;
+    for (int row = 0; row < get_last_non_zero_row(matrix); row++) {
+        double row_sum = get_row_sum(matrix, row);
+        if (row_sum == 0 || !is_informative_row(matrix, row))
+            continue;
+        double equation_clear_probability = 1 - (MATRIX_CELL(matrix, row, matrix.size.cols - 1) / row_sum);
+        if (equation_clear_probability > maximal_clear_probability) {
+            maximal_clear_probability = equation_clear_probability;
+            int random_variable_index = (rand() % (int) row_sum);
+            int variable_counter = 0;
+            for (int col = 0; col < matrix.size.cols - 1; col++) {
+                if (MATRIX_CELL(matrix, row, col) != 0) {
+                    if (random_variable_index == variable_counter) {
+                        *best_variable_clear = extract_board_cell(col, variables_map);
+                        goto lblReturn;
+                    }
+                    variable_counter++;
+                }
+            }
+        }
+    }
+    lblReturn:
+    return maximal_clear_probability;
+}
+
+void make_best_guess(t_board board, t_moves *moves, t_matrix variables_map,
+                     t_matrix matrix, int total_number_of_mines) {
+    t_board_cell best_variable_cell = {0, 0};
+    t_move *bet_clear_move = (t_move *) malloc(sizeof(t_move));
+    double isolated_clear_probability = get_isolated_clear_probability(total_number_of_mines, board);
+    double variable_clear_probability = get_best_clear_variable(&best_variable_cell, matrix, variables_map);
+    if (variable_clear_probability >= isolated_clear_probability)
+        bet_clear_move->cell = best_variable_cell;
+    else
+        bet_clear_move->cell = get_random_isolated_cell(board, variables_map);
+    bet_clear_move->is_mine = false;
+    moves->moves = bet_clear_move;
+    moves->number_of_moves = 1;
+}
+
+t_error_code get_moves(t_board board, t_moves *moves, int total_number_of_mines) {
     if (!is_legal_board(board))
         return ERROR_GET_MOVE_ILLEGAL_BOARD_DETECTED;
-    float general_clear_probability = get_general_clear_probability(total_number_of_mines, board);
-    t_ptr_map mine_map = initialize_map(board, general_clear_probability, true);
-    t_ptr_map clear_map = initialize_map(board, general_clear_probability, false);
-    fill_maps(board, mine_map, clear_map, general_clear_probability);
-    t_error_code error_code = log_probability_maps(mine_map, clear_map);
+    t_matrix_size matrix_size = {0, 0};
+    t_error_code error_code = get_matrix_dimensions(board, &matrix_size);
     if (error_code)
         return error_code;
-    *move = select_optimal_move(mine_map, clear_map, general_clear_probability, board);
-    free(mine_map);
-    free(clear_map);
-    error_code = log_move(*move);
+    t_matrix matrix = initialize_matrix(matrix_size, 0);
+    t_matrix variables_map = fill_matrix(board, matrix);
+    if (!matrix.data || !variables_map.data)
+        return ERROR_INITIALIZE_MATRIX_MEMORY_ALLOC;
+    log_variables_map(variables_map);
+    gauss_eliminate(matrix);
+    t_matrix deterministic_map = initialize_matrix(board_size, VARIABLES_MAP_NULL);
+    if (!deterministic_map.data)
+        return ERROR_INITIALIZE_MATRIX_MEMORY_ALLOC;
+    int deterministic_cells = mark_deterministic_cells(matrix, variables_map, deterministic_map);
+    if (deterministic_cells > 0)
+        extract_deterministic_moves(deterministic_map, deterministic_cells, moves);
+    else {
+        make_best_guess(board, moves, variables_map, matrix, total_number_of_mines);
+    }
+    free(variables_map.data);
+    free(deterministic_map.data);
+    free(matrix.data);
+    error_code = log_moves(*moves);
     if (error_code)
         return error_code;
-    update_board_by_move(board, *move);
+    update_board_by_moves(board, *moves);
     return RETURN_CODE_SUCCESS;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
