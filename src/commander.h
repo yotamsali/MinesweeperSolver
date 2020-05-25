@@ -14,7 +14,7 @@ typedef struct screenshot_data t_screenshot_data;
 
 t_error_code raise_minesweeper();
 
-t_error_code execute_move(t_move move);
+t_error_code execute_moves(t_moves moves);
 
 t_error_code set_minesweeper_level(t_level level);
 

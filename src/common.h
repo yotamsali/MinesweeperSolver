@@ -9,8 +9,8 @@
 #endif
 
 #ifdef DEBUG
-#define ASSERT(x)                                                      \
-    if (!(x)) {                                                         \
+#define ASSERT(row)                                                      \
+    if (!(row)) {                                                         \
         char buf[2048];                                                 \
         snprintf (buf, 2048, "Assertion failed in \"%s\", line %d\n"    \
                  "\tProbable bug in software.\n",                       \

@@ -70,10 +70,10 @@ const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
          {SIX,   {DEFAULT_GREY, TURQUOISE}}};
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
-    t_cell_rect cell_rect = {(int) round(((float) (cell._x)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell._x + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell._y)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
-                             (int) round(((float) (cell._y + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
+    t_cell_rect cell_rect = {(int) round(((double) (cell.row)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((double) (cell.row + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((double) (cell.col)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
+                             (int) round(((double) (cell.col + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
     return cell_rect;
 }
 
@@ -96,7 +96,7 @@ bool is_colors_equal(t_color color1, t_color color2) {
 }
 
 t_color_histogram get_cell_color_histogram(t_board_cell cell, t_screenshot_data *screenshot_data) {
-    t_color_histogram histogram = (t_color_histogram) malloc(NUMBER_OF_COLORS * sizeof(float));
+    t_color_histogram histogram = (t_color_histogram) malloc(NUMBER_OF_COLORS * sizeof(double));
     for (int i = 0; i < NUMBER_OF_COLORS; i++)
         histogram[i] = 0;
     t_cell_rect cell_rect = get_cell_rect(cell);
@@ -113,7 +113,7 @@ t_color_histogram get_cell_color_histogram(t_board_cell cell, t_screenshot_data 
             }
         }
     for (int j = 0; j < NUMBER_OF_COLORS; j++)
-        histogram[j] /= (float) ((cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.y_min));
+        histogram[j] /= (double) ((cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.y_min));
     return histogram;
 }
 
@@ -155,16 +155,16 @@ t_error_code classify_cell(t_cell_type *prediction, t_board_cell cell, t_screens
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code set_board(t_ptr_board board, t_screenshot_data *screenshot_data_ptr) {
-    for (int i = 0; i < board_size._x; i++)
-        for (int j = 0; j < board_size._y; j++) {
-            t_board_cell cell = {i, j};
-            if (GET_CELL(board, cell) == UNKNOWN_CELL) {
+t_error_code set_board(t_board board, t_screenshot_data *screenshot_data_ptr) {
+    for (int row = 0; row < board_size.rows; row++)
+        for (int col = 0; col < board_size.cols; col++) {
+            t_board_cell cell = {row, col};
+            if (BOARD_CELL(board, row, col) == UNKNOWN_CELL) {
                 t_cell_type cell_prediction = UNKNOWN_CELL;
                 t_error_code error_code = classify_cell(&cell_prediction, cell, screenshot_data_ptr);
                 if (error_code)
                     return error_code;
-                SET_CELL(board, cell, cell_prediction);
+                BOARD_CELL(board, row, col) = cell_prediction;
             }
         }
     return RETURN_CODE_SUCCESS;
@@ -182,7 +182,7 @@ update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_dat
             else if (is_colors_equal(pixel_color, colors_palette[BLACK]))
                 black_counter++;
         }
-    float black_yellow_ratio = (float) black_counter / (float) yellow_counter;
+    double black_yellow_ratio = (double) black_counter / (double) yellow_counter;
     if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_GAME_ON)
         *game_status = GAME_ON;
     else if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_LOST)
@@ -195,7 +195,7 @@ update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_dat
     return RETURN_CODE_SUCCESS;
 }
 
-t_error_code update_board(t_ptr_board board, t_game_status *game_status, t_cell_rect game_status_rect) {
+t_error_code update_board(t_board board, t_game_status *game_status, t_cell_rect game_status_rect) {
     t_screenshot_data screenshot_data = {0, 0, NULL};
     t_error_code error_code = RETURN_CODE_SUCCESS;
     error_code = get_minesweeper_screenshot(&screenshot_data);
