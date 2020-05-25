@@ -23,4 +23,6 @@ double get_row_upper_bound(t_matrix matrix, int row);
 
 double get_row_lower_bound(t_matrix matrix, int row);
 
+double get_row_sum(t_matrix matrix, int row);
+
 #endif //MINESWEEPERSOLVER_MATRIX_H

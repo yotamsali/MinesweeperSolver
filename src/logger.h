@@ -16,7 +16,7 @@ t_error_code log_moves(t_moves moves);
 
 t_error_code log_game_restart();
 
-t_error_code log_game_status(float black_yellow_ratio, t_game_status game_status);
+t_error_code log_game_status(double black_yellow_ratio, t_game_status game_status);
 
 t_error_code log_histogram(t_board_cell cell, t_color_histogram);
 

@@ -31,7 +31,7 @@ bool is_numeric_cell(t_board board, t_board_cell cell) {
     return cell_value != MINE && cell_value != UNKNOWN_CELL;
 }
 
-float get_isolated_clear_probability(int total_number_of_mines, t_board board) {
+double get_isolated_clear_probability(int total_number_of_mines, t_board board) {
     int detected_mines_counter = 0;
     int unknown_cells_counter = 0;
     for (int row = 0; row < board_size.rows; row++)
@@ -41,8 +41,8 @@ float get_isolated_clear_probability(int total_number_of_mines, t_board board) {
             if (BOARD_CELL(board, row, col) == UNKNOWN_CELL)
                 unknown_cells_counter++;
         }
-    return 1 - ((float) (total_number_of_mines - detected_mines_counter) /
-                (float) (unknown_cells_counter));
+    return 1 - ((double) (total_number_of_mines - detected_mines_counter) /
+                (double) (unknown_cells_counter));
 }
 
 bool is_cell_in_board(t_board_cell cell) {
@@ -270,17 +270,13 @@ t_board_cell get_random_isolated_cell(t_board board, t_matrix variables_map) {
     return random_isolated_cell;
 }
 
-//TODO: Update according to max / min range (with relative part).
-float get_best_clear_variable(t_board_cell *best_variable_clear, t_matrix matrix, t_matrix variables_map) {
-    float maximal_clear_probability = 0;
-    for (int row = 0; row < matrix.size.rows; row++) {
-        double row_sum = 0;
-        for (int col = 0; col < matrix.size.cols - 1; col++) {
-            row_sum += MATRIX_CELL(matrix, row, col);
-        }
+double get_best_clear_variable(t_board_cell *best_variable_clear, t_matrix matrix, t_matrix variables_map) {
+    double maximal_clear_probability = 0;
+    for (int row = 0; row < get_last_non_zero_row(matrix); row++) {
+        double row_sum = get_row_sum(matrix, row);
         if (row_sum == 0 || !is_informative_row(matrix, row))
             continue;
-        float equation_clear_probability = 1 - (MATRIX_CELL(matrix, row, matrix.size.cols - 1) / row_sum);
+        double equation_clear_probability = 1 - (MATRIX_CELL(matrix, row, matrix.size.cols - 1) / row_sum);
         if (equation_clear_probability > maximal_clear_probability) {
             maximal_clear_probability = equation_clear_probability;
             int random_variable_index = (rand() % (int) row_sum);
@@ -304,8 +300,8 @@ void make_best_guess(t_board board, t_moves *moves, t_matrix variables_map,
                      t_matrix matrix, int total_number_of_mines) {
     t_board_cell best_variable_cell = {0, 0};
     t_move *bet_clear_move = (t_move *) malloc(sizeof(t_move));
-    float isolated_clear_probability = get_isolated_clear_probability(total_number_of_mines, board);
-    float variable_clear_probability = get_best_clear_variable(&best_variable_cell, matrix, variables_map);
+    double isolated_clear_probability = get_isolated_clear_probability(total_number_of_mines, board);
+    double variable_clear_probability = get_best_clear_variable(&best_variable_cell, matrix, variables_map);
     if (variable_clear_probability >= isolated_clear_probability)
         bet_clear_move->cell = best_variable_cell;
     else

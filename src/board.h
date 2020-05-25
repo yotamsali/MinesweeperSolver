@@ -60,7 +60,7 @@ typedef struct board_size t_board_size;
 typedef struct board_cell t_board_cell;
 typedef t_cell_type *t_board;
 typedef struct cell_rect t_cell_rect;
-typedef float *t_color_histogram;
+typedef double *t_color_histogram;
 
 
 #define BOARD_CELL(board, x_index, y_index) board[x_index * board_size.cols + y_index]

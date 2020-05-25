@@ -59,10 +59,10 @@ const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
          {SIX,   {DEFAULT_GREY, TURQUOISE}}};
 
 t_cell_rect get_cell_rect(t_board_cell cell) {
-    t_cell_rect cell_rect = {(int) round(((float) (cell.row)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell.row + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
-                             (int) round(((float) (cell.col)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
-                             (int) round(((float) (cell.col + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
+    t_cell_rect cell_rect = {(int) round(((double) (cell.row)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((double) (cell.row + 1)) * BITMAP_CELL_SIZE) + X_BITMAP_MARGIN,
+                             (int) round(((double) (cell.col)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN,
+                             (int) round(((double) (cell.col + 1)) * BITMAP_CELL_SIZE) + Y_BITMAP_MARGIN};
     return cell_rect;
 }
 
@@ -85,7 +85,7 @@ bool is_colors_equal(t_color color1, t_color color2) {
 }
 
 t_color_histogram get_cell_color_histogram(t_board_cell cell, t_screenshot_data *screenshot_data) {
-    t_color_histogram histogram = (t_color_histogram) malloc(NUMBER_OF_COLORS * sizeof(float));
+    t_color_histogram histogram = (t_color_histogram) malloc(NUMBER_OF_COLORS * sizeof(double));
     for (int i = 0; i < NUMBER_OF_COLORS; i++)
         histogram[i] = 0;
     t_cell_rect cell_rect = get_cell_rect(cell);
@@ -102,7 +102,7 @@ t_color_histogram get_cell_color_histogram(t_board_cell cell, t_screenshot_data 
             }
         }
     for (int j = 0; j < NUMBER_OF_COLORS; j++)
-        histogram[j] /= (float) ((cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.y_min));
+        histogram[j] /= (double) ((cell_rect.x_max - cell_rect.x_min) * (cell_rect.y_max - cell_rect.y_min));
     return histogram;
 }
 
@@ -171,7 +171,7 @@ update_game_status(t_game_status *game_status, t_screenshot_data *screenshot_dat
             else if (is_colors_equal(pixel_color, colors_palette[BLACK]))
                 black_counter++;
         }
-    float black_yellow_ratio = (float) black_counter / (float) yellow_counter;
+    double black_yellow_ratio = (double) black_counter / (double) yellow_counter;
     if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_GAME_ON)
         *game_status = GAME_ON;
     else if (black_yellow_ratio <= MAX_BLACK_YELLOW_RATIO_LOST)

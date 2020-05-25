@@ -81,7 +81,7 @@ const char *get_game_status_string(t_game_status status) {
     }
 }
 
-t_error_code log_game_status(float black_yellow_ratio, t_game_status game_status) {
+t_error_code log_game_status(double black_yellow_ratio, t_game_status game_status) {
     if (!is_logging_needed(GAME_STATUS_TAG))
         return RETURN_CODE_SUCCESS;
     char status_buffer[GAME_STATUS_MAX_PRINTOUT_SIZE];
@@ -120,12 +120,12 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
     return RETURN_CODE_SUCCESS;
 }
 
-void print_single_cell(char *buffer, t_data float_data, t_matrix_size matrix_size, t_board integer_board,
-                       size_t *writing_length, size_t buffer_size, bool is_float, t_matrix_cell cell) {
-    if (is_float) {
-        t_matrix float_matrix = {float_data, matrix_size};
+void print_single_cell(char *buffer, t_data double_data, t_matrix_size matrix_size, t_board integer_board,
+                       size_t *writing_length, size_t buffer_size, bool is_double, t_matrix_cell cell) {
+    if (is_double) {
+        t_matrix double_matrix = {double_data, matrix_size};
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
-                                    "%.3f ", MATRIX_CELL(float_matrix, cell.row, cell.col));
+                                    "%.3f ", MATRIX_CELL(double_matrix, cell.row, cell.col));
     } else
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
                                     "%d ", BOARD_CELL(integer_board, cell.row, cell.col));
@@ -133,19 +133,19 @@ void print_single_cell(char *buffer, t_data float_data, t_matrix_size matrix_siz
 }
 
 void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_length,
-                                  size_t buffer_size, bool is_float, bool is_transpose, t_matrix_size matrix_size) {
-    t_data float_data = NULL;
+                                  size_t buffer_size, bool is_double, bool is_transpose, t_matrix_size matrix_size) {
+    t_data double_data = NULL;
     t_board integer_board = NULL;
-    if (is_float)
-        float_data = (t_data) matrix;
+    if (is_double)
+        double_data = (t_data) matrix;
     else
         integer_board = (t_board) matrix;
     if (is_transpose)
         for (int row = 0; row < matrix_size.rows; row++) {
             for (int col = 0; col < matrix_size.cols; col++) {
                 t_matrix_cell cell = {row, col};
-                print_single_cell(buffer, float_data, matrix_size, integer_board,
-                                  writing_length, buffer_size, is_float, cell);
+                print_single_cell(buffer, double_data, matrix_size, integer_board,
+                                  writing_length, buffer_size, is_double, cell);
             }
             *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
         }
@@ -153,8 +153,8 @@ void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_le
         for (int col = 0; col < matrix_size.cols; col++) {
             for (int row = 0; row < matrix_size.rows; row++) {
                 t_matrix_cell cell = {row, col};
-                print_single_cell(buffer, float_data, matrix_size, integer_board,
-                                  writing_length, buffer_size, is_float, cell);
+                print_single_cell(buffer, double_data, matrix_size, integer_board,
+                                  writing_length, buffer_size, is_double, cell);
             }
             *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length, "\n");
         }

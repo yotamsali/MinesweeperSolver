@@ -98,3 +98,10 @@ double get_row_upper_bound(t_matrix matrix, int row) {
     }
     return upper_bound;
 }
+
+double get_row_sum(t_matrix matrix, int row) {
+    double sum = 0;
+    for (int col = 0; col < matrix.size.cols - 1; col++)
+        sum += MATRIX_CELL(matrix, row, col);
+    return sum;
+}

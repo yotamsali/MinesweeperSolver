@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
 #include <windows.h>
@@ -152,9 +151,6 @@ t_error_code restart_game(t_level level) {
 }
 
 t_error_code get_minesweeper_screenshot(t_screenshot_data *screenshot_data_ptr) {
-    //TODO: reduce length by creating sub-functions, and verify cleanup issues.
-    // Dor - I knew that this function is too long, but when trying to split it became two too long functions
-    // due to cleanup issues (free and Delete). Do you have any idea how it is possible to handle this block of code?
     t_error_code error_code = RETURN_CODE_SUCCESS;
     RECT window_rect = {0};
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
