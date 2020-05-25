@@ -1,3 +1,10 @@
+/**
+ * @file commander.c
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief commander module goal is to export game Windows-based required services in order to play.
+ * It implements Minesweeper screenshot (for board detection), cursor interface, and game process raise.
+ */
 #include <stdbool.h>
 #include <math.h>
 #include <windows.h>

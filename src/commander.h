@@ -1,3 +1,9 @@
+/**
+ * @file commander.h
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief Header commander module. Exports Windows-based functions that are required to play Minesweeper.
+ */
 #ifndef MINESWEEPERSOLVER_COMMANDER_H
 #define MINESWEEPERSOLVER_COMMANDER_H
 
