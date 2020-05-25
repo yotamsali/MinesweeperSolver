@@ -1,3 +1,14 @@
+/**
+ * @file board.c
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief board module is responsible for Minesweeper board image detection.
+ * Board image detection is being done in 3 major steps:
+ * First, slice the board cells out of the Minesweeper window screenshot.
+ * Second, create histogram of specific colors for every cell.
+ * Three, use the cell to colors mapping to order to determine the kind of cell.
+ * In addition, module allows to detects game status by examining the type of smiley (using colors ratio).
+ */
 #include <windows.h>
 #include <math.h>
 #include <stdbool.h>

@@ -1,3 +1,12 @@
+/**
+ * @file board_analyzer.c
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief board_analyzer module is responsible for choosing the moves for a given board state.
+ * The used technique is creating a linear matrix for all unknown cells and finding all deterministic variables
+ * using Gaussian elimination. Once a guess is required, a probability-based heuristic is used,
+ * to select a clear cell candidate.
+ */
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>

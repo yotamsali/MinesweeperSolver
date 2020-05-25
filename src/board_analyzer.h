@@ -1,3 +1,9 @@
+/**
+ * @file board_analyzer.h
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief Header for board_analyzer module. Exports get_moves.
+ */
 #ifndef MINESWEEPERSOLVER_BOARD_ANALYZER_H
 #define MINESWEEPERSOLVER_BOARD_ANALYZER_H
 

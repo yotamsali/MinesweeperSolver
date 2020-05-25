@@ -1,3 +1,9 @@
+/**
+ * @file board.h
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief Header for board module, exports update_board and board data types.
+ */
 #ifndef MINESWEEPERSOLVER_BOARD_H
 #define MINESWEEPERSOLVER_BOARD_H
 
