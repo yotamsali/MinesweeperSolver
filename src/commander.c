@@ -1,10 +1,12 @@
-/**
+/**************************************************************************************************
  * @file commander.c
+ * @project MinesweeperSolver
  * @author Yotam Sali
  * @date 25.5.2020
- * @brief commander module goal is to export game Windows-based required services in order to play.
- * It implements Minesweeper screenshot (for board detection), cursor interface, and game process raise.
- */
+ * @brief commander module goal is to export game Windows-based
+ * required services in order to play. It implements Minesweeper
+ * screenshot (for board detection), cursor interface, and game process raise.
+ **************************************************************************************************/
 #include <stdbool.h>
 #include <math.h>
 #include <windows.h>
@@ -47,6 +49,10 @@ t_error_code raise_minesweeper() {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Change cursor location for non-interfering the screenshot.
+ * @return Error code.
+ */
 t_error_code move_cursor_out_of_board() {
     POINT point = POINT_OUT_OF_BOARD;
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
@@ -59,6 +65,12 @@ t_error_code move_cursor_out_of_board() {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Click the cursor in a certain location.
+ * @param cursor_position Point representing position.
+ * @param is_right_click Boolean, true if right-click, false otherwise.
+ * @return Error code.
+ */
 t_error_code click(POINT *cursor_position, bool is_right_click) {
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
     if (!window_handle)
@@ -75,11 +87,22 @@ t_error_code click(POINT *cursor_position, bool is_right_click) {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Translate cell to Minesweeper window coordinates.
+ * @param minesweeper_cursor_position - pointer to cursor position to set.
+ * @param move Move with related cell.
+ * @return Void.
+ */
 void get_minesweeper_cursor_position(POINT *minesweeper_cursor_position, t_board_cell move) {
     minesweeper_cursor_position->x = round(BOARD_X_MARGIN + (move.row * BOARD_CELL_SIZE));
     minesweeper_cursor_position->y = round(BOARD_Y_MARGIN + (move.col * BOARD_CELL_SIZE));
 }
 
+/**
+ * @brief Minesweeper window coordinate to screen coordinates system
+ * @param minesweeper_cursor_position - coordinates to translate.
+ * @return Error code.
+ */
 t_error_code translate_minesweeper_point_to_screen(POINT *minesweeper_cursor_position) {
     HWND window_handle = FindWindow(0, MINESWEEPER_WINDOW_NAME);
     if (!window_handle)
@@ -89,6 +112,12 @@ t_error_code translate_minesweeper_point_to_screen(POINT *minesweeper_cursor_pos
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Get screen coordinates of a move.
+ * @param screen_cursor_position Pointer to screen coordinates.
+ * @param move Move containing board cell.
+ * @return Error code.
+ */
 t_error_code get_screen_cursor_position(POINT *screen_cursor_position, t_board_cell move) {
     get_minesweeper_cursor_position(screen_cursor_position, move);
     t_error_code error_code = translate_minesweeper_point_to_screen(screen_cursor_position);
@@ -97,6 +126,12 @@ t_error_code get_screen_cursor_position(POINT *screen_cursor_position, t_board_c
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Execute a single move.
+ * Press left/right click on a clear/mine cell.
+ * @param move The move to execute.
+ * @return Error code.
+ */
 t_error_code execute_move(t_move move) {
     POINT cursor_position = {0, 0};
     t_error_code error_code = get_screen_cursor_position(&cursor_position, move.cell);

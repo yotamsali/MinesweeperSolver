@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ * @file logger.c
+ * @project MinesweeperSolver
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief logger module which is responsible for logging MinesweeperSolver activity.
+ * Logger will save log files under a special logging directory that is creates if needed.
+ * All logging is done using upper bounds for output size, to avoid heap memory allocation.
+**************************************************************************************************/
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -8,8 +17,6 @@
 #include "hard_coded_config.h"
 #include "logger.h"
 
-#define DEBUG_TAG "Debug"
-#define RUNTIME_TAG "Runtime"
 #define LOGGING_DIRECTORY_NAME "Logs"
 #define MKDIR_MODE 0700
 #define MATRIX_MAX_PRINTOUT_SIZE 8192
@@ -21,18 +28,32 @@
 #define GAME_STATUS_MAX_PRINTOUT_SIZE 128
 #define ILLEGAL_CELL_PRINTOUT_SIZE 128
 
+/**
+ * Each log message is associated to "Runtime" or "Debug" tag.
+ * The configuration in hard_coded_config determines if each of those tags is logged.
+ */
+#define DEBUG_TAG "Debug"
+#define RUNTIME_TAG "Runtime"
 #define MOVE_TAG RUNTIME_TAG
 #define GAME_STATUS_TAG DEBUG_TAG
 #define GAME_RESTART_TAG RUNTIME_TAG
 #define HISTOGRAM_TAG DEBUG_TAG
 #define BOARD_TAG RUNTIME_TAG
-#define MATRIX_TAG RUNTIME_TAG
-#define VARIABLES_MAP_TAG RUNTIME_TAG
-#define ILLEGAL_CELL_TAG RUNTIME_TAG
+#define MATRIX_TAG DEBUG_TAG
+#define VARIABLES_MAP_TAG DEBUG_TAG
+#define ILLEGAL_CELL_TAG DEBUG_TAG
 
-
+/**
+ * Log file FILE pointer global.
+ */
 FILE *log_file = NULL;
 
+/**
+ * @brief Write message to log file in a specific tag.
+ * @param tag String representing tag of the logging (RUNTIME_TAG or DEBUG_TAG).
+ * @param message String of the message.
+ * @return Error code of log writing.
+ */
 t_error_code write_log(const char *tag, const char *message) {
     time_t now;
     time(&now);
@@ -43,6 +64,11 @@ t_error_code write_log(const char *tag, const char *message) {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Is logging required for a specific tag.
+ * @param tag Tag string (RUNTIME_TAG or DEBUG_TAG).
+ * @return boolan, true is logging is needed, false otherwise.
+ */
 bool is_logging_needed(const char *tag) {
     if (!strncmp(tag, DEBUG_TAG, sizeof(tag)) && !DEBUG_LOGGING)
         return false;
@@ -70,6 +96,11 @@ t_error_code log_moves(t_moves moves) {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Get string representing game status.
+ * @param status Game status (enum type, t_game_status).
+ * @return String representing game status (Win, Lost or Game on).
+ */
 const char *get_game_status_string(t_game_status status) {
     switch (status) {
         case WIN:
@@ -120,6 +151,18 @@ t_error_code log_histogram(t_board_cell cell, t_color_histogram histogram) {
     return RETURN_CODE_SUCCESS;
 }
 
+/**
+ * @brief Print a single cell of matrix.
+ * @param buffer Logging printout string buffer.
+ * @param double_data Pointer to double (in case of double-type matrix), NULL otherwise.
+ * @param matrix_size Size of matrix.
+ * @param integer_board Pointer to integer (in case of integer-type matrix), NULL otherwise.
+ * @param writing_length Current writing length of buffer.
+ * @param buffer_size Maximal size of writing left to buffer.
+ * @param is_double Boolean, True if matrix type is double, False otherwise.
+ * @param cell Matrix cell to print.
+ * @return Void.
+ */
 void print_single_cell(char *buffer, t_data double_data, t_matrix_size matrix_size, t_board integer_board,
                        size_t *writing_length, size_t buffer_size, bool is_double, t_matrix_cell cell) {
     if (is_double) {
@@ -129,9 +172,19 @@ void print_single_cell(char *buffer, t_data double_data, t_matrix_size matrix_si
     } else
         *writing_length += snprintf(buffer + *writing_length, buffer_size - *writing_length,
                                     "%d ", BOARD_CELL(integer_board, cell.row, cell.col));
-
 }
 
+/**
+ * @brief Print a matrix (integer board or double matrix) to log.
+ * @param buffer Printout logging buffer (string).
+ * @param matrix Void pointer to matrix (double or integer type).
+ * @param writing_length Current writing length into buffer.
+ * @param buffer_size Maximal size of writing left to buffer.
+ * @param is_double Boolean, True if matrix type is double, False otherwise.
+ * @param is_transpose Boolean, True if matrix print should be transposed, False otherwise.
+ * @param matrix_size Size of matrix.
+ * @return Void.
+ */
 void write_board_matrix_to_buffer(char *buffer, void *matrix, size_t *writing_length,
                                   size_t buffer_size, bool is_double, bool is_transpose, t_matrix_size matrix_size) {
     t_data double_data = NULL;

@@ -1,3 +1,10 @@
+/**************************************************************************************************
+ * @file minesweeper_solver.c
+ * @project MinesweeperSolver
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief MinesweeperSolver project main, executes solver routine.
+**************************************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include "minesweeper_solver_utils.h"
@@ -8,24 +15,35 @@
 #include "error_codes.h"
 #include "common.h"
 
-// Input arguments, be careful when changing.
+/**
+ * Input arguments, be careful when changing.
+ */
 typedef enum {
     ARG_EXE_NAME = 0,
     ARG_GAME_LEVEL = 1,
     ARG_NUMBER // Number of argument (not arg index).
 } t_arg;
 
+/**
+ * Global variable of board_size, used for accessing board.
+ */
 t_board_size board_size = {0, 0};
 
 #define USAGE_MESSAGE "Usage: MinesweeperSolver.exe level \n level - member of {beginner, intermediate, expert}\n"
 
+/**
+ * @brief Play a single game trial.
+ * @param game_status Pointer for returning game result at the end.
+ * @param minesweeper_level Wanted level of game.
+ * @return Error code of game trial.
+ */
 t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
     t_error_code error_code = RETURN_CODE_SUCCESS;
     t_board board = initialize_board(board);
     if (!board)
         return ERROR_INITIALIZE_BOARD_MEMORY;
     t_moves moves = get_first_moves();
-    while (true) {
+    while (!error_code) {
         error_code = execute_moves(moves);
         if (error_code)
             goto lblCleanup;
@@ -33,15 +51,17 @@ t_error_code play_game(t_game_status *game_status, t_level minesweeper_level) {
         if (*game_status != GAME_ON || error_code)
             goto lblCleanup;
         error_code = get_moves(board, &moves, minesweeper_level.number_of_mines);
-        if (error_code) {
-            goto lblCleanup;
-        }
     }
     lblCleanup:
     free(board);
     return error_code;
 }
 
+/**
+ * @brief Start game trail looping until winning.
+ * @param minesweeper_level Wanted level of game.
+ * @return Error code.
+ */
 t_error_code start_game_trials(t_level minesweeper_level) {
     t_game_status game_status = GAME_ON;
     board_size = minesweeper_level.board_size;
@@ -65,6 +85,9 @@ t_error_code start_game_trials(t_level minesweeper_level) {
     return error_code;
 }
 
+/**
+ * @brief MinesweeperSolver main.
+ */
 int main(int argc, char *argv[]) {
     t_error_code error_code = RETURN_CODE_SUCCESS;
     ASSERT(argv != NULL);

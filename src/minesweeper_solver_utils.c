@@ -1,3 +1,11 @@
+/**************************************************************************************************
+ * @file minesweeper_solver_utils.c
+ * @project MinesweeperSolver
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief MinesweeperSolver utilities file.
+ * Includes Minesweeper levels specifications, board initializer, and opening move getter.
+**************************************************************************************************/
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -5,6 +13,9 @@
 #include "board_analyzer.h"
 #include "minesweeper_solver_utils.h"
 
+/**
+ * Details of three Minesweeper levels in t_level struct format.
+ */
 const t_level levels[] = {{"expert",       {30, 16}, 5, 82,
                                   99, {245, 28},
                                   {242, 266, 63, 83}},
@@ -15,6 +26,10 @@ const t_level levels[] = {{"expert",       {30, 16}, 5, 82,
                                   10, {66,  28},
                                   {68,  90,  63, 83}}};
 
+/**
+ * @brief Set all board cells to state unknown.
+ * @param board Board pointer.
+ */
 void set_board_cells_to_unknown(t_board board) {
     int board_cells_number = board_size.rows * board_size.cols;
     for (int i = 0; i < board_cells_number; i++)

@@ -1,8 +1,24 @@
+/**************************************************************************************************
+ * @file matrix.c
+ * @project MinesweeperSolver
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief matrix module, implementation of basic matrix operations.
+ * This module is used mostly for linear equation system solving,
+ * in order to find mine and clear cells.
+**************************************************************************************************/
 #include <stdlib.h>
 #include <math.h>
 #include "matrix.h"
 #include "logger.h"
 
+/**
+ * @brief Swap two matrix rows inplace.
+ * @param matrix - The matrix.
+ * @param row1 - First replaced row.
+ * @param row2 - Second replaced row.
+ * @return Void
+ */
 void swap_rows(t_matrix matrix, int row1, int row2) {
     for (int col = 0; col < matrix.size.cols; col++) {
         double temp = MATRIX_CELL(matrix, row1, col);
@@ -11,12 +27,26 @@ void swap_rows(t_matrix matrix, int row1, int row2) {
     }
 }
 
+/**
+ * @brief Multiply a matrix row in scalar (inplace).
+ * @param matrix - The matrix.
+ * @param row - Multiplied row index.
+ * @param factor - Multiplication scalar factor.
+ * @return Void
+ */
 void multiply_row(t_matrix matrix, int row, double factor) {
     for (int col = 0; col < matrix.size.cols; col++) {
         MATRIX_CELL(matrix, row, col) *= factor;
     }
 }
 
+/**
+ * @brief Add a row to another (inplace).
+ * @param matrix - The matrix.
+ * @param base_row - The changed row index.
+ * @param added_row - The row index that we wish to add to base row.
+ * @return Void
+ */
 void add_row(t_matrix matrix, int base_row, int added_row) {
     for (int col = 0; col < matrix.size.cols; col++) {
         MATRIX_CELL(matrix, base_row, col) += MATRIX_CELL(matrix, added_row, col);

@@ -1,3 +1,10 @@
+/**************************************************************************************************
+ * @file error_codes.h
+ * @project MinesweeperSolver
+ * @author Yotam Sali
+ * @date 25.5.2020
+ * @brief Header for all error codes of the program.
+**************************************************************************************************/
 #ifndef MINESWEEPERSOLVER_ERROR_CODES_H
 #define MINESWEEPERSOLVER_ERROR_CODES_H
 
