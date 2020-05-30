@@ -1,13 +1,13 @@
 # MinesweeperSolver
 
-Automated end-to-end Minesweeper solver in Windows enviroment (written in C).
+Automated end-to-end Minesweeper solver in Windows environment (written in C).
 The solver implements the image-processing of board detection, move execution and planning.
 
 ## Building
 In order to build and execute MinesweeperSolver do the following:
 
 ### Prerequisites
-You must have Windows enviroment and gdi32.dll, CMake, and Make installed over your machince.
+You must have Windows environment and gdi32.dll, CMake, and Make installed over your machince.
 
 ### Build
 ```bash
@@ -31,12 +31,17 @@ MinesweeperSolver design is based on the following modules:
 
 ### Board
 Responsible for detection of board cells and game status (smiley state).
-The module's way of action is taking a screenshot of Minesweeper window, spliting into cells,
+The module's way of action is taking a screenshot of Minesweeper window, splitting into cells,
 and detecting each cell based on special "magic" colors that specify every cell type.
 Detecting smiley is based on yellow-back colors ratio around the smiley.
 
+<p align="center">
+  <img src="https://i-cdn.phonearena.com/images/article/51145-image/Classic-Minesweeper-game-is-available-for-free-on-Android-and-    iOS.jpg" width="150" height="150" />
+</p>
+
+
 ### Commander
-Move execution (cursor control), Minesweeper window screenshots, and other windows API based calls.
+Move execution (cursor control), Minesweeper window screenshots, and other Windows API based calls.
 
 ### BoardAnalyzer
 The "brain" of the program, determines moves according to board state.
@@ -44,7 +49,7 @@ The "brain" of the program, determines moves according to board state.
 2. Solves deterministic solutions in 0-1 variables (using Gaussian elimination).
 3. In case program doesn't recognize deterministic cell, it makes the best guess over a clear cell.
 Guessing is done when no deterministic cell is detected, and in a probability-based method.
-Deeper explaination is inside module comments.
+Deeper explanation is within source comments.
 
 ### MinesweeperSolver
 Main program. Runs the program logic.
@@ -61,11 +66,12 @@ Heap allocated matrix utilities.
 In case of unexpected result the program will return a non-zero error code.
 All error codes are stated in "src/error_codes.h" file.
 
+
 ## Logging 
 
-MinesweeperSolver logs it's operation in every execution under directory named "Logs".
+MinesweeperSolver writes a log in every execution, under a directory named "Logs".
 Log files are named after the execution date and hour.
-Loggign is splited into two levels: Runtime and Debug. In default only "Runtime" logs are written, but it can be configured under "hard_coded_config.h".
+Logging is splitted into two levels: "Runtime" and "Debug". In default, only "Runtime" logs are written, but it can be configured under "hard_coded_config.h".
 
 
 ## Bug reports
