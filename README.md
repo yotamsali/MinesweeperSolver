@@ -20,11 +20,10 @@ make
 ```bash
 MinesweeperSolver.exe {level}
 ```
-The parameter level can be either 'beginner', 'intermediate' or 'expert'.
-If Minesweeper app is not opened once executing, verify that the 'Minesweeper X.exe' relative path to MinesweeperSolver, is as stated in src/hard_coded_config.h.
-Otherwise, change the "MINESWEEPER_PATH" parameter.
-The 'Minesweeper X.exe' exact version is critical for this solver, and it is cloned inside 'minesweeper' directory.
+The parameter level can be either "beginner", "intermediate" or "expert".
 
+If Minesweeper app is not opened once executing, verify that the "Minesweeper X.exe" relative path to MinesweeperSolver, is as stated in src/hard_coded_config.h.
+Otherwise, change the "MINESWEEPER_PATH" parameter. However, there shouldn't be any problems because game is cloned in the correct version and path.
 
 ## Design
 
@@ -36,27 +35,43 @@ The module's way of action is taking a screenshot of Minesweeper window, splitin
 and detecting each cell based on special "magic" colors that specify every cell type.
 Detecting smiley is based on yellow-back colors ratio around the smiley.
 
+### Commander
+Move execution (cursor control), Minesweeper window screenshots, and other windows API based calls.
+
+### BoardAnalyzer
+The "brain" of the program, determines moves according to board state.
+1. Creates set of linear of equations over unknown cells.
+2. Solves deterministic solutions in 0-1 variables (using Gaussian elimination).
+3. In case program doesn't recognize deterministic cell, it makes the best guess over a clear cell.
+Guessing is done when no deterministic cell is detected, and in a probability-based method.
+Deeper explaination is inside module comments.
+
+### MinesweeperSolver
+Main program. Runs the program logic.
+
+### Logger
+Responsible for program logging.
+
+### Matrix
+Heap allocated matrix utilities.
+
 
 ## Error Handling
 
 In case of unexpected result the program will return a non-zero error code.
-All error codes are stated in '''src/error_codes.h''' file.
+All error codes are stated in "src/error_codes.h" file.
 
 ## Logging 
 
-Olm doesn't generate random numbers itself. Instead the caller must
-provide the random data. This makes it easier to port the library to different
-platforms since the caller can use whatever cryptographic random number
-generator their platform provides.
+MinesweeperSolver logs it's operation in every execution under directory named "Logs".
+Log files are named after the execution date and hour.
+Loggign is splited into two levels: Runtime and Debug. In default only "Runtime" logs are written, but it can be configured under "hard_coded_config.h".
 
 
 ## Bug reports
 
-Please file bug reports at https://github.com/matrix-org/olm/issues
+Please file bug reports at https://github.com/yotamsali/MinesweeperSolver/issues
 
 ## Authors
 
-The software may be subject to the U.S. export control laws and regulations
-and by downloading the software the user certifies that he/she/it is
-authorized to do so in accordance with those export control laws and
-regulations.
+Yotam Sali, Israel, 2020.
