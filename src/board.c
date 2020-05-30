@@ -72,10 +72,10 @@ const t_color colors_palette[NUMBER_OF_COLORS] =
          {0,   128, 128},    // TURQUOISE
          {255, 255, 0}};     // YELLOW
 
- /**
-  * Mapping between cell types with a pair of unique magic colors.
-  * If cell pixels contains such a pair of colors, cell type is as declared.
-  */
+/**
+ * Mapping between cell types with a pair of unique magic colors.
+ * If cell pixels contains such a pair of colors, cell type is as declared.
+ */
 const t_unique_color_identifier unique_color_identifiers[NUMBER_OF_CELL_TYPES] =
         {{ONE,   {DEFAULT_GREY, BLUE}},
          {TWO,   {DEFAULT_GREY, GREEN}},
