@@ -1,7 +1,12 @@
 # MinesweeperSolver
 
+<img src="blob/demo.gif" width="250" height="320"/>
+
+
 Automated end-to-end Minesweeper solver in Windows environment (written in C).
 The solver implements the image-processing of board detection, move execution and planning.
+
+
 
 ## Building
 In order to build and execute MinesweeperSolver do the following:
@@ -36,7 +41,7 @@ and detecting each cell based on special "magic" colors that specify every cell 
 Detecting smiley is based on yellow-back colors ratio around the smiley.
 
 <p align="center">
-  <img src="https://i-cdn.phonearena.com/images/article/51145-image/Classic-Minesweeper-game-is-available-for-free-on-Android-and-    iOS.jpg" width="150" height="150" />
+  <img src="blob/minesweeper_colors_example.jpg" width="150" height="150" title="Cells unique colors example" />
 </p>
 
 
@@ -50,6 +55,17 @@ The "brain" of the program, determines moves according to board state.
 3. In case program doesn't recognize deterministic cell, it makes the best guess over a clear cell.
 Guessing is done when no deterministic cell is detected, and in a probability-based method.
 Deeper explanation is within source comments.
+
+Implementation is based in some parts on the great article https://massaioli.wordpress.com/2013/01/12/solving-minesweeper-with-matricies/.
+
+Here is a little example for the creation of such linear equations system:
+
+<p align="center">
+  <img src="blob/variable_mapping.png" width="100" height="215" />
+</p>
+<p align="center">
+  <img src="blob/linear_equations.png" width="235" height="135"/>
+</p>
 
 ### MinesweeperSolver
 Main program. Runs the program logic.
